@@ -1,3 +1,11 @@
+#=====================================================================================================
+#   Projekt Seminararbeit SimulationInfektion
+#   Modul Simulation - Simulation der Bewegungen und der Infektion einer Anzahl von Personen  
+#   
+#   Changelog
+#   2021-01-29  -   Erstellung
+#=====================================================================================================
+
 import uuid
 #import dataclasses
 import random
@@ -100,7 +108,7 @@ class Human():
         self.Status.Origin.X = self.Status.CurPos.X
         self.Status.Origin.Y = self.Status.CurPos.Y
 
-        self.Config = HumanConfig(1.5, 0.5, 1.0, 0.3, 0.5, 50)
+        self.Config = HumanConfig(1.3, 0.5, 1.0, 0.3, 0.5, 150)
         self.Status.Speed = random.uniform(self.Config.MinSpeed, self.Config.MaxSpeed)
         self.Status.StopRadius = self.Config.RadiusFar
         self.Status.StopAngle = 0.0
@@ -142,64 +150,43 @@ class Human():
     def UpdateDestination(self):
         self.Speed = random.uniform(self.Config.MinSpeed, self.Config.MaxSpeed)
         self.SpeedHuman = 0
-        
-        #Berechnung des neuen Ziels unter Beachtung der maximalen Bewegungsfreiheit MaxDestinationRadius
-        diffX = random.uniform(self.Config.MaxDistance * -1, self.Config.MaxDistance)
-        diffY = random.uniform(self.Config.MaxDistance * -1, self.Config.MaxDistance)
-        radius = math.sqrt(math.pow(diffX, 2) + math.pow(diffY, 2))
+        DestFound = False
 
-        #Check maximum Distance / Radius
-        if radius > self.Config.MaxDistance:
-            diffX = diffX * self.Config.MaxDistance / radius
-            diffY = diffY * self.Config.MaxDistance / radius
+        while DestFound == False:
+            #Berechnung des neuen Ziels unter Beachtung der maximalen Bewegungsfreiheit MaxDestinationRadius
+            diffX = random.uniform(self.Config.MaxDistance * -1, self.Config.MaxDistance)
+            diffY = random.uniform(self.Config.MaxDistance * -1, self.Config.MaxDistance)
+            radius = math.sqrt(math.pow(diffX, 2) + math.pow(diffY, 2))
 
-        #Set new Destination to Status
-        self.Status.Destination.X = self.Status.Origin.X + diffX
-        self.Status.Destination.Y = self.Status.Origin.Y + diffY
+            #Check maximum Distance / Radius
+            if radius > self.Config.MaxDistance:
+                diffX = diffX * self.Config.MaxDistance / radius
+                diffY = diffY * self.Config.MaxDistance / radius
 
-        #Check borders of area
-        if self.Status.Destination.X > self.maxX:
-            self.Status.Destination.X = self.maxX - self.Config.RadiusNear
+            #Set new Destination to Status
+            self.Status.Destination.X = self.Status.Origin.X + diffX
+            self.Status.Destination.Y = self.Status.Origin.Y + diffY
 
-        if self.Status.Destination.X < 0:
-            self.Status.Destination.X = self.Config.RadiusNear
+            DestFound = True
+            #Check borders of area
+            if self.Status.Destination.X > self.maxX:
+                DestFound = False
+                
+            if self.Status.Destination.X < 0:
+                DestFound = False
 
-        if self.Status.Destination.Y > self.maxY:
-            self.Status.Destination.Y = self.maxY - self.Config.RadiusNear
+            if self.Status.Destination.Y > self.maxY:
+                DestFound = False
 
-        if self.Status.Destination.Y < 0:
-            self.Status.Destination.Y = self.Config.RadiusNear
+            if self.Status.Destination.Y < 0:
+                DestFound = False
 
         #MinDist = math.pow(self.Status.Speed, 2) / (2 * self.Config.Acceleration) + 0.03
 
     #endregion
-    #endregion
 
-    #region Simulation Go
-    def Go(self):
-        #region Zeitstempel Zeitdifferenz berechnen
-        timedelta = datetime.datetime.now() - self.TimeStamp
-        self.TimeDelay = timedelta.total_seconds()
-        self.TimeStamp = datetime.datetime.now()
-        #endregion
-
-        #region UpdateSpeed
-        self.UpdateSpeed()
-        #endregion
-
-        #region Berechnung des Winkels Laufrichtung
-        self.Status.DeltaPos.X = self.Status.Destination.X - self.Status.CurPos.X
-        self.Status.DeltaPos.Y = self.Status.Destination.Y - self.Status.CurPos.Y
-        RadiusDest = math.sqrt(self.Status.DeltaPos.X**2 +self.Status.DeltaPos.Y**2)
-        
-        #Winkel der Bewegung berechnen, wenn kein Hindernis
-        if RadiusDest > 0:
-            self.Status.Angle = (math.acos(self.Status.DeltaPos.X / RadiusDest)) * 180 / math.pi
-            if self.Status.DeltaPos.Y < 0:
-                self.Status.Angle = self.Status.Angle * (-1)
-        #endregion
-
-        #region Berechnung der Schrittweite
+    #region UpdatePosition
+    def UpdatePosition(self):
         if self.SpeedHuman == 0:
             StopTime = datetime.datetime.now() - self.LastMovTime
             DistX = abs(self.Status.Destination.X - self.Status.CurPos.X)
@@ -217,6 +204,7 @@ class Human():
 
             DistX = self.Status.Destination.X - self.Status.CurPos.X
             DistY = self.Status.Destination.Y - self.Status.CurPos.Y
+            RadiusDest = math.sqrt(DistX**2 + DistY**2)
 
             if RadiusDest > DeltaRadius:
                 self.Status.CurPos.X = self.Status.CurPos.X + self.Status.DeltaPos.X
@@ -226,6 +214,42 @@ class Human():
                 self.Status.CurPos.Y = self.Status.CurPos.Y + DistY
 
             self.LastMovTime = datetime.datetime.now()
+    #endregion
+
+    #region UpdateAngle Berechnung des Winkels Laufrichtung
+    def UpdateAngle(self):
+        self.Status.DeltaPos.X = self.Status.Destination.X - self.Status.CurPos.X
+        self.Status.DeltaPos.Y = self.Status.Destination.Y - self.Status.CurPos.Y
+        RadiusDest = math.sqrt(self.Status.DeltaPos.X**2 +self.Status.DeltaPos.Y**2)
+        
+        #Winkel der Bewegung berechnen, wenn kein Hindernis
+        if RadiusDest > 0:
+            self.Status.Angle = (math.acos(self.Status.DeltaPos.X / RadiusDest)) * 180 / math.pi
+            if self.Status.DeltaPos.Y < 0:
+                self.Status.Angle = self.Status.Angle * (-1)
+        #endregion
+
+        return RadiusDest
+    #endregion
+
+    #region Simulation Go
+    def Go(self):
+        #region Zeitstempel Zeitdifferenz berechnen
+        timedelta = datetime.datetime.now() - self.TimeStamp
+        self.TimeDelay = timedelta.total_seconds()
+        self.TimeStamp = datetime.datetime.now()
+        #endregion
+
+        #region UpdateSpeed
+        self.UpdateSpeed()
+        #endregion
+
+        #region Berechnung des Winkels Laufrichtung
+        self.UpdateAngle()
+        #endregion
+
+        #region Berechnung der Schrittweite
+        self.UpdatePosition()
         #endregion
 
         return (self.Status.CurPos.X, self.Status.CurPos.Y)
@@ -235,6 +259,9 @@ class Human():
     #region Return
     def GetCurrentPosition(self):
         return (self.Status.CurPos.X, self.Status.CurPos.Y)
+
+    def GetCurrentStep(self):
+        return (self.Status.DeltaPos.X, self.Status.DeltaPos.Y)
 
     def GetGuid(self):
         return self.guid
@@ -275,9 +302,7 @@ def PrintHumanStats():
 def Simulate():
     for humi in HumanList:
         x, y = humi.Go()
-        print(humi.guid)
-        print(x)
-        print(y)    
+        print(str(humi.guid) + " > " + str(x) + "," + str(y))
         
       
 #endregion 
