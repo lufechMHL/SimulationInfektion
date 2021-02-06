@@ -23,7 +23,7 @@ simulation_refresh_seconds = 0.01
 # Scale pixel / meters
 simulation_scale_meter2pixel = 0.05
 # Scale time multiplicator 
-simulation_human_count = 50
+simulation_human_count = 20
 
 #endregion
 
