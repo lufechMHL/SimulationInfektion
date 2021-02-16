@@ -54,8 +54,8 @@ class HumanConfig():
     MaxSpeed: float
     MinSpeed: float
     
-    RadiusFar: float
-    RadiusNear: float
+    RadiusFar: float    #Ab diesem Radius abbremsen
+    RadiusNear: float   #Nicht näher, stopp
     
     Acceleration: float
     MaxDistance: float
@@ -309,7 +309,7 @@ class Human():
             self.Status.StopAngle = DestAngle
 
             if DiffAngle < 0: #Ziel befindet sich von aktueller Richtung links 
-                if abs( DiffAngle) > self.Config.DeltaAngel:
+                if abs(DiffAngle) > self.Config.DeltaAngel:
                     self.Status.Angle = self.Status.Angle - self.Config.DeltaAngel
                 else:
                     self.Status.Angle = DestAngle
