@@ -4,10 +4,18 @@
 #   
 #   Changelog
 #   2021-01-29  -   Erstellung
+#   2021-02-28  -   Umstellung Animation auf pygame
 #=====================================================================================================
 
-import tkinter
+#import tkinter
+#python -python -m pip install -U pygame --user
+
+import pygame
+from pygame.locals import *
+
+import colour
 import time
+import sys
 import HumanDataBase
 
 
@@ -16,100 +24,71 @@ import HumanDataBase
 simulation_window_width=1500
 # height of the simulation window
 simulation_window_height=800
+# background color 
+simulation_backgroundcolor = colour.dark_green
 # radius of the ball
 simulation_ball_radius = 5
 # delay between successive frames in seconds
 simulation_refresh_seconds = 0.01
 # Scale pixel / meters
-simulation_scale_meter2pixel = 0.05
+simulation_scale_meter2pixel = 0.1
 # Scale time multiplicator 
-simulation_human_count = 20
-
-#endregion
-
-#region create the main window of the simulation
-def create_simulation_window():
-    window = tkinter.Tk()
-    window.title("Tkinter simulation Demo")
-    # Uses python 3.6+ string interpolation
-    window.geometry(f'{simulation_window_width}x{simulation_window_height}')
-    return window
-#endregion
- 
-#region Create a canvas for simulation and add it to main window
-def create_simulation_canvas(window):
-    canvas = tkinter.Canvas(window)
-    canvas.configure(bg="black")
-    canvas.pack(fill="both", expand=True)
-    return canvas
+simulation_human_count = 200
 #endregion
  
 #region create and animate humans in an infinite loop
-def simulate_humans(window, canvas):
-    #initialize Simulatorbase
+#def simulate_humans(window, canvas):
+def simulate_humans():
+    #region initialize Simulatorbase
     maxx = simulation_window_width * simulation_scale_meter2pixel
     maxy = simulation_window_height * simulation_scale_meter2pixel
     HumanDataBase.Initialize(maxx, maxy, simulation_human_count)
-    hradius = simulation_ball_radius * simulation_scale_meter2pixel
-    if hradius < 2:
-        hradius = 2
+    simulation_ball_radius = 0.5 / simulation_scale_meter2pixel
+    if simulation_ball_radius < 2:
+        simulation_ball_radius = 2
+    #endregion
 
-    #create here all human-instances at first loop imported from HumanDataBase
-    humanCanvasList = []    #Liste der Grafikobjekte Humans
+    #region Init pygame
+    pygame.init()
+    pygame.display.set_caption('SimulationInfection St-El-Lu')
+    pygame.key.set_repeat(250, 125)
+    screen = pygame.display.set_mode((simulation_window_width, simulation_window_height))
+    font = pygame.font.Font('consola.ttf', 20)
 
-    #initialize with absolute position
-    for x in range(len(HumanDataBase.HumanList)):  
-        tagstr = "human, " + str(HumanDataBase.HumanList[x].GetGuid())
-        humanCanvas = canvas.create_oval(
-                (HumanDataBase.HumanList[x].Status.CurPos.X / simulation_scale_meter2pixel) - simulation_ball_radius,
-                (HumanDataBase.HumanList[x].Status.CurPos.Y / simulation_scale_meter2pixel) - simulation_ball_radius,
-                (HumanDataBase.HumanList[x].Status.CurPos.X / simulation_scale_meter2pixel) + simulation_ball_radius,
-                (HumanDataBase.HumanList[x].Status.CurPos.Y / simulation_scale_meter2pixel) + simulation_ball_radius,
-                fill="blue", outline="white", width=1, tags=tagstr)
-        humanCanvasList.append(humanCanvas) 
-
-    window.update()
+    table = pygame.Surface((simulation_window_width, simulation_window_height))
+    table.fill(simulation_backgroundcolor)
+    screen.blit(table, (0,0))
+    pygame.display.flip()
+    #endregion
 
     #region main-loop
     while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == K_ESCAPE):
+                sys.exit()
 
-        HumanDataBase.Simulate()
-#try with moving instead of delete and new paint.. 
-#        for x in range(len(HumanDataBase.HumanList)):  
-#            item = str(HumanDataBase.HumanList[x].GetGuid())
-#            Stepx = int(HumanDataBase.HumanList[x].Status.DeltaPos.X)
-#            Stepy = int(HumanDataBase.HumanList[x].Status.DeltaPos.Y)
-#            hitem = canvas.find_withtag(item)
-#            canvas.move( hitem, Stepx, Stepy)
-
-        canvas.delete("all")
         for x in range(len(HumanDataBase.HumanList)):  
-            canvas.create_oval(
-                (HumanDataBase.HumanList[x].Status.CurPos.X / simulation_scale_meter2pixel) - simulation_ball_radius,
-                (HumanDataBase.HumanList[x].Status.CurPos.Y / simulation_scale_meter2pixel) - simulation_ball_radius,
-                (HumanDataBase.HumanList[x].Status.CurPos.X / simulation_scale_meter2pixel) + simulation_ball_radius,
-                (HumanDataBase.HumanList[x].Status.CurPos.Y / simulation_scale_meter2pixel) + simulation_ball_radius,
-                fill="blue", outline="white", width=1)
+            #aktuelle grafik ausblenden - mit Background-color übermalen
+            xval = HumanDataBase.HumanList[x].Status.CurPos.X / simulation_scale_meter2pixel
+            yval = HumanDataBase.HumanList[x].Status.CurPos.Y / simulation_scale_meter2pixel
+            pygame.draw.circle(table, simulation_backgroundcolor,(xval,yval),simulation_ball_radius, 0)    
 
-        window.update()
+            #neue Position berechnen
+            HumanDataBase.HumanList[x].Go()
 
+            #neue Position zeichnen
+            xval = HumanDataBase.HumanList[x].Status.CurPos.X / simulation_scale_meter2pixel
+            yval = HumanDataBase.HumanList[x].Status.CurPos.Y / simulation_scale_meter2pixel
+            pygame.draw.circle(table, colour.light_yellow,(xval,yval),simulation_ball_radius, 0)    
+
+        #frame auf Display blenden
+        screen.blit(table, (0,0))
+        pygame.display.flip()
         time.sleep(simulation_refresh_seconds)
 
-        #region simulation movement here 
-        #human_pos = canvas.coords(human)
-        # unpack array to variables
-        #xl,yl,xr,yr = human_pos
-        #if xl < abs(xinc) or xr > simulation_window_width-abs(xinc):
-        #    xinc = -xinc
-        #if yl < abs(yinc) or yr > simulation_window_height-abs(yinc):
-        #    yinc = -yinc
-        #endregion
     #endregion
 #endregion 
 
-
 #region main-program ------------------------------------------------------------------------------------------
-simulation_window = create_simulation_window()
-simulation_canvas = create_simulation_canvas(simulation_window)
-simulate_humans(simulation_window,simulation_canvas)
+simulate_humans()
 #endregion ----------------------------------------------------------------------------------------------------

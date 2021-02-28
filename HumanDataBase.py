@@ -86,6 +86,7 @@ class Human():
     HumanID: int
     maxX: float #maximum range (area) in meters X-coordinate (direction west --> east) 
     maxY: float #maximum range (area) in meters Y-coordinate (direction north --> south)
+    TimeBase: datetime.date
     TimeDelay: float
     TimeStamp: datetime.date
     LastMovTime: datetime.date
@@ -117,6 +118,7 @@ class Human():
         self.Status.StopRadius = self.Config.RadiusFar
         self.Status.StopAngle = 0.0
 
+        self.TimeBase = datetime.datetime.now()
         self.TimeDelay = 0.0
         self.TimeStamp = datetime.datetime.now()
         self.SpeedHuman = 0
@@ -192,13 +194,13 @@ class Human():
     #region UpdatePosition
     def UpdatePosition(self):
         if self.SpeedHuman == 0:
-            StopTime = datetime.datetime.now() - self.LastMovTime
+            StopTime = self.TimeBase - self.LastMovTime
             DistX = abs(self.Status.Destination.X - self.Status.CurPos.X)
             DistY = abs(self.Status.Destination.Y - self.Status.CurPos.Y)
 
-            if (DistX < 0.02 and DistY < 0.02) or (StopTime.total_seconds() > 20):
+            if (DistX < 0.02 and DistY < 0.02) or (StopTime.total_seconds() > 5):
                 self.UpdateDestination()
-                self.LastMovTime = datetime.datetime.now()
+                self.LastMovTime = self.TimeBase
 
         else:
 
@@ -217,7 +219,7 @@ class Human():
                 self.Status.CurPos.X = self.Status.CurPos.X + DistX
                 self.Status.CurPos.Y = self.Status.CurPos.Y + DistY
 
-            self.LastMovTime = datetime.datetime.now()
+            self.LastMovTime = self.TimeBase
     #endregion
 
     #region UpdateAngle Berechnung des Winkels Laufrichtung
@@ -338,7 +340,9 @@ class Human():
     #region Simulation Go
     def Go(self):
         #region Zeitstempel Zeitdifferenz berechnen
-        timedelta = datetime.datetime.now() - self.TimeStamp
+
+        self.TimeBase = datetime.datetime.now()
+        timedelta = (datetime.datetime.now() - self.TimeStamp) 
         self.TimeDelay = timedelta.total_seconds()
         self.TimeStamp = datetime.datetime.now()
         #endregion
