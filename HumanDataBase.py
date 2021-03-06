@@ -13,6 +13,7 @@ import random
 import time
 import math
 import datetime
+import numpy as np   #install via pip >>> python -m pip install -U numpy --user
 
 #region classes
 #region HumanStat - Daten zum Darstellen in der GUI
@@ -91,7 +92,7 @@ class Human():
     TimeStamp: datetime.date
     LastMovTime: datetime.date
     SpeedHuman: float   
-
+    MyIndexInHumanList: int
  
     #region constructor
     def __init__(self, srcx, srcy, dstx, dsty, maxx, maxy):
@@ -125,6 +126,7 @@ class Human():
         self.LastMovTime = datetime.datetime.now()
         self.maxX = maxx
         self.maxY = maxy
+        self.MyIndexInHumanList = -1
     #endregion
 
     #region private functions
@@ -337,6 +339,28 @@ class Human():
         return RadiusNext
     #endregion
 
+    #region Positions-Array verwalten
+    #Funktion ermittelt den eigenen Index in der globalen Liste HumanList
+    def GetMyIndexInHumanList(self):
+        if self.MyIndexInHumanList < 0:
+            for x in range(len(HumanList)):  
+                tagstr = HumanList[x].GetGuid()
+                if tagstr == self.guid:
+                    self.MyIndexInHumanList = x
+        
+        return self.MyIndexInHumanList
+
+    def SetCurrentPosInHumanArray(SetPos: bool):
+        tempx = math.floor( self.Status.CurPos.X)
+        tempy = math.floor( self.Status.CurPos.Y)
+        idx = self.GetMyIndexInHumanList()
+        if SetPos == True:
+            HumanArray(tempx, tempy, idx) = 1
+        else:
+            HumanArray(tempx, tempy, idx) = 0
+
+    #endregion
+
     #region Simulation Go
     def Go(self):
         #region Zeitstempel Zeitdifferenz berechnen
@@ -420,6 +444,9 @@ HumanList = [] #List
 
 #region module fuctions / interface 
 def Initialize(maxx, maxy, humancount):
+
+    #init numpy-array für die Fläche mit z-Koordinate für die Humans in einer Meterfläche
+    HumanArray = np.zeros(maxx, maxy, humancount)
 
     for x in range(humancount):
         newi = Human(0, 0, 0, 0, maxx, maxy)
