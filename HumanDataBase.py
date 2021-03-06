@@ -205,6 +205,7 @@ class Human():
                 self.LastMovTime = self.TimeBase
 
         else:
+            self.SetCurrentPosInHumanArray(False)   #reset aktuelle Position im Array
 
             DeltaRadius = self.TimeDelay * self.SpeedHuman 
             self.Status.DeltaPos.X = DeltaRadius * math.cos(self.Status.Angle / 360 * 2 * math.pi)
@@ -221,6 +222,7 @@ class Human():
                 self.Status.CurPos.X = self.Status.CurPos.X + DistX
                 self.Status.CurPos.Y = self.Status.CurPos.Y + DistY
 
+            self.SetCurrentPosInHumanArray(True)   #set aktuelle Position im Array >> neue Position
             self.LastMovTime = self.TimeBase
     #endregion
 
@@ -439,7 +441,7 @@ simulation_scale_time_multiplicator = 1.0
 
 #region globale variables
 HumanList = [] #List
-
+HumanArray = np.array([])
 #endregion
 
 #region module fuctions / interface 
