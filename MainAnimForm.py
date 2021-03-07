@@ -67,6 +67,8 @@ def simulate_humans():
             if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == K_ESCAPE):
                 sys.exit()
 
+        start = time.time()
+
         for x in range(len(HumanDataBase.HumanList)):  
             #aktuelle grafik ausblenden - mit Background-color übermalen
             xval = HumanDataBase.HumanList[x].Status.CurPos.X / simulation_scale_meter2pixel
@@ -86,9 +88,13 @@ def simulate_humans():
         pygame.display.flip()
         time.sleep(simulation_refresh_seconds)
 
+        ticks = time.time() - start
+        print(ticks)
+
     #endregion
 #endregion 
 
 #region main-program ------------------------------------------------------------------------------------------
 simulate_humans()
 #endregion ----------------------------------------------------------------------------------------------------
+

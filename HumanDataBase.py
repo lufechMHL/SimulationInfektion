@@ -234,14 +234,18 @@ class Human():
         lastrad = self.Config.RadiusFar
         RadiusNext = lastrad
 
-        #Schleife über alle Humans zur Suche nach der Person mit dem geringsten Abstand zur eigenen Person
-        for x in range(len(HumanList)):  
-            tagstr = HumanList[x].GetGuid()
+        #Über die Matrix HumanArray werden jetzt nur die Humans ermittelt, die sich im Umkreis von RadiusFar befinden
+        #humansAround = self.CheckIfHumanAround()
+
+        #Schleife über die Liste aller Humans im Umkreis RadiusFar
+        #for hidx in humansAround:  
+        for hidx in range(len(HumanList)):
+            tagstr = HumanList[hidx].GetGuid()
             if tagstr != self.guid:
 
-                #region Berechnung Abstand und Winkel zu dieser anderen Person x
-                DeltaX = HumanList[x].Status.CurPos.X - self.Status.CurPos.X
-                DeltaY = HumanList[x].Status.CurPos.Y - self.Status.CurPos.Y
+                #region Berechnung Abstand und Winkel zu dieser anderen Person hidx
+                DeltaX = HumanList[hidx].Status.CurPos.X - self.Status.CurPos.X
+                DeltaY = HumanList[hidx].Status.CurPos.Y - self.Status.CurPos.Y
                 Radius = math.sqrt(math.pow(DeltaX, 2) + math.pow(DeltaY, 2))
                 Angel = math.acos(DeltaX / Radius) * 180 / math.pi
                 if DeltaY < 0:
@@ -358,9 +362,26 @@ class Human():
         tempy = math.floor( self.Status.CurPos.Y) 
         idx = self.GetMyIndexInHumanList()
         if SetPos == True:
-            HumanArray[tempx, tempy, idx] = 1
+            HumanArray[idx, tempx, tempy] = 1
         else:
-            HumanArray[tempx, tempy, idx] = 0
+            HumanArray[idx, tempx, tempy] = 0
+
+    def CheckIfHumanAround(self):
+        tempx = math.floor( self.Status.CurPos.X) 
+        tempy = math.floor( self.Status.CurPos.Y) 
+        idx = self.GetMyIndexInHumanList()
+        humansAroundMe = []
+        maxh = HumanArray.shape[0] - 1 #lese die länge der 0ten Dimension des Array >> Dimension Index HumanList >> 0-based 
+        maxindex = math.ceil(self.Config.RadiusFar) #für die Prüfung relevanter Radius = Index
+        for x in range(tempx - maxindex, tempx + maxindex):
+            for y in range(tempy -maxindex, tempy + maxindex):
+                for h in range(0,maxh): 
+                    if x >= 0 and x < self.maxX and y >= 0 and y < self.maxY:
+                        if HumanArray[h,x,y] > 0:
+                            humansAroundMe.append(h)
+
+        return humansAroundMe
+
 
     #endregion
 
@@ -443,17 +464,17 @@ class Human():
 #
 simulation_scale_time_multiplicator = 1.0
 #x-range area in meters
-simulation_area_xmeters = 300
+simulation_area_xmeters = 1000
 #y-range area in meters
-simulation_area_ymeters = 200
+simulation_area_ymeters = 800
 #count of humans in the area
-simulation_human_count = 40
+simulation_human_count = 300
 #endregion
 
 #region globale variables
 HumanList = [] #List
 #init numpy-array für die Fläche mit z-Koordinate für die Humans in einer Meterfläche
-HumanArray = np.zeros((simulation_area_xmeters, simulation_area_ymeters, simulation_human_count),dtype=int)
+HumanArray = np.zeros((simulation_human_count,simulation_area_xmeters, simulation_area_ymeters ),dtype=int)
 #endregion
 
 #region module fuctions / interface 
@@ -478,10 +499,13 @@ def PrintHumanStats():
         print(humi.Status.DeltaPos.Y)
         
 def Simulate():
+    start = time.time()
     for humi in HumanList:
         x, y = humi.Go()
         #print(str(humi.guid) + " > " + str(x) + "," + str(y))    
-      
+
+    ticks = time.time() - start
+    print(ticks)
 #endregion 
 
 
