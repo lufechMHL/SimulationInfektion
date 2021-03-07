@@ -5,6 +5,7 @@
 #   Changelog
 #   2021-01-29  -   Erstellung
 #   2021-02-06  -   Erweiterung Bewegungssimulation Ausweichen vor anderen Personen
+#   2021-03-07  -   Erweiterung Speicherung der Position in einem Array/Cube zur schnelleren Suche benachbarter Personen
 #=====================================================================================================
 
 import uuid
@@ -99,15 +100,15 @@ class Human():
         self.Status = HumanStat()
         self.guid = uuid.uuid4()
         if srcx == 0 and srcy == 0:
-            self.Status.CurPos.X = random.uniform(0.0, maxx)
-            self.Status.CurPos.Y = random.uniform(0.0, maxy)
+            self.Status.CurPos.X = self.Limit(random.uniform(0.0, maxx), maxx)
+            self.Status.CurPos.Y = self.Limit(random.uniform(0.0, maxy), maxy)
         else:
             self.Status.CurPos.X = srcx
             self.Status.CurPos.Y = srcy
 
         if dstx == 0 and dsty == 0:
-            self.Status.Destination.X = random.uniform(0.0, maxx)
-            self.Status.Destination.Y = random.uniform(0.0, maxy)
+            self.Status.Destination.X = self.Limit(random.uniform(0.0, maxx), maxx)
+            self.Status.Destination.Y = self.Limit(random.uniform(0.0, maxy), maxy)
         else:
             self.Status.Destination.X = dstx
             self.Status.Destination.Y = dsty
@@ -172,8 +173,8 @@ class Human():
                 diffY = diffY * self.Config.MaxDistance / radius
 
             #Set new Destination to Status
-            self.Status.Destination.X = self.Status.Origin.X + diffX
-            self.Status.Destination.Y = self.Status.Origin.Y + diffY
+            self.Status.Destination.X = self.Limit(self.Status.Origin.X + diffX, self.maxX)
+            self.Status.Destination.Y = self.Limit(self.Status.Origin.Y + diffY, self.maxY)
 
             DestFound = True
             #Check borders of area
@@ -216,11 +217,11 @@ class Human():
             RadiusDest = math.sqrt(DistX**2 + DistY**2)
 
             if RadiusDest > DeltaRadius:
-                self.Status.CurPos.X = self.Status.CurPos.X + self.Status.DeltaPos.X
-                self.Status.CurPos.Y = self.Status.CurPos.Y + self.Status.DeltaPos.Y
+                self.Status.CurPos.X = self.Limit(self.Status.CurPos.X + self.Status.DeltaPos.X, self.maxX)
+                self.Status.CurPos.Y = self.Limit(self.Status.CurPos.Y + self.Status.DeltaPos.Y, self.maxY)
             else:
-                self.Status.CurPos.X = self.Status.CurPos.X + DistX
-                self.Status.CurPos.Y = self.Status.CurPos.Y + DistY
+                self.Status.CurPos.X = self.Limit(self.Status.CurPos.X + DistX, self.maxX)
+                self.Status.CurPos.Y = self.Limit(self.Status.CurPos.Y + DistY, self.maxY)
 
             self.SetCurrentPosInHumanArray(True)   #set aktuelle Position im Array >> neue Position
             self.LastMovTime = self.TimeBase
@@ -352,14 +353,14 @@ class Human():
         
         return self.MyIndexInHumanList
 
-    def SetCurrentPosInHumanArray(SetPos: bool):
-        tempx = math.floor( self.Status.CurPos.X)
-        tempy = math.floor( self.Status.CurPos.Y)
+    def SetCurrentPosInHumanArray(self, SetPos: bool):
+        tempx = math.floor( self.Status.CurPos.X) 
+        tempy = math.floor( self.Status.CurPos.Y) 
         idx = self.GetMyIndexInHumanList()
         if SetPos == True:
-            HumanArray(tempx, tempy, idx) = 1
+            HumanArray[tempx, tempy, idx] = 1
         else:
-            HumanArray(tempx, tempy, idx) = 0
+            HumanArray[tempx, tempy, idx] = 0
 
     #endregion
 
@@ -411,7 +412,11 @@ class Human():
 
         return DiffAngle
         
-
+    #Function to limit the meter-value to the maximum array-size    
+    def Limit(self, value, maxval):
+        if value > (maxval - 1):
+            value = maxval - 1
+        return value
 
     #endregion
 
@@ -435,23 +440,32 @@ class Human():
 #region -- Main module -------------------------------------------------------------------------------------------
 
 #region constants
+#
 simulation_scale_time_multiplicator = 1.0
-
+#x-range area in meters
+simulation_area_xmeters = 300
+#y-range area in meters
+simulation_area_ymeters = 200
+#count of humans in the area
+simulation_human_count = 40
 #endregion
 
 #region globale variables
 HumanList = [] #List
-HumanArray = np.array([])
+#init numpy-array für die Fläche mit z-Koordinate für die Humans in einer Meterfläche
+HumanArray = np.zeros((simulation_area_xmeters, simulation_area_ymeters, simulation_human_count),dtype=int)
 #endregion
 
 #region module fuctions / interface 
-def Initialize(maxx, maxy, humancount):
+def GetAreaSize():
+    return simulation_area_xmeters, simulation_area_ymeters
 
-    #init numpy-array für die Fläche mit z-Koordinate für die Humans in einer Meterfläche
-    HumanArray = np.zeros(maxx, maxy, humancount)
+def GetAreaHumanCount():
+    return simulation_area_xmeters, simulation_area_ymeters
 
-    for x in range(humancount):
-        newi = Human(0, 0, 0, 0, maxx, maxy)
+def Initialize():
+    for x in range(simulation_human_count):
+        newi = Human(0, 0, 0, 0, simulation_area_xmeters, simulation_area_ymeters)
         HumanList.append(newi)
 
 def PrintHumanStats():
@@ -466,8 +480,7 @@ def PrintHumanStats():
 def Simulate():
     for humi in HumanList:
         x, y = humi.Go()
-        print(str(humi.guid) + " > " + str(x) + "," + str(y))
-        
+        #print(str(humi.guid) + " > " + str(x) + "," + str(y))    
       
 #endregion 
 

@@ -16,12 +16,13 @@ from pygame.locals import *
 import colour
 import time
 import sys
+import math
 import HumanDataBase
 
 
 #region constant definitions 
 # width of the simulation window
-simulation_window_width=1500
+simulation_window_width=1300
 # height of the simulation window
 simulation_window_height=800
 # background color 
@@ -30,20 +31,19 @@ simulation_backgroundcolor = colour.dark_green
 simulation_ball_radius = 5
 # delay between successive frames in seconds
 simulation_refresh_seconds = 0.01
-# Scale pixel / meters
-simulation_scale_meter2pixel = 0.1
-# Scale time multiplicator 
-simulation_human_count = 200
 #endregion
  
 #region create and animate humans in an infinite loop
 #def simulate_humans(window, canvas):
 def simulate_humans():
     #region initialize Simulatorbase
-    maxx = simulation_window_width * simulation_scale_meter2pixel
-    maxy = simulation_window_height * simulation_scale_meter2pixel
-    HumanDataBase.Initialize(maxx, maxy, simulation_human_count)
-    simulation_ball_radius = 0.5 / simulation_scale_meter2pixel
+    maxx, maxy = HumanDataBase.GetAreaSize()
+
+    simulation_scale_meter2pixel = maxx / simulation_window_width
+    simulation_window_height = math.floor( maxy / simulation_scale_meter2pixel)
+    simulation_ball_radius = math.ceil(0.5 / simulation_scale_meter2pixel)
+
+    HumanDataBase.Initialize()
     if simulation_ball_radius < 2:
         simulation_ball_radius = 2
     #endregion
