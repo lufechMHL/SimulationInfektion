@@ -70,8 +70,8 @@ def simulate_humans():
     canvas1.create_window(200, 140, window=entry1)
 
     def getSquareRoot ():  
-        x1 = entry1.get()
-        label1 = tk.Label(root, text= float(x1)**0.5)
+        simulation_ball_radius = int(entry1.get())
+        #label1 = tk.Label(root, text= float(x1)**0.5)
         canvas1.create_window(200, 230, window=label1)
         
     button1 = tk.Button(text='Get the Square Root', command=getSquareRoot)

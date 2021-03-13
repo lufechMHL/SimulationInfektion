@@ -464,11 +464,11 @@ class Human():
 #
 simulation_scale_time_multiplicator = 1.0
 #x-range area in meters
-simulation_area_xmeters = 1000
+simulation_area_xmeters = 100
 #y-range area in meters
-simulation_area_ymeters = 800
+simulation_area_ymeters = 80
 #count of humans in the area
-simulation_human_count = 300
+simulation_human_count = 30
 #endregion
 
 #region globale variables
