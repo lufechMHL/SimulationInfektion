@@ -1,12 +1,23 @@
-import HumanDataBase
-import time
+import tkinter as tk
 
-HumanDataBase.Initialize(500, 100, 5)
+root= tk.Tk()
 
-HumanDataBase.PrintHumanStats()
+canvas1 = tk.Canvas(root, width = 400, height = 300)
+canvas1.pack()
 
-while(True):
-    HumanDataBase.Simulate()
-    HumanDataBase.PrintHumanStats()
-    time.sleep(1)
+entry1 = tk.Entry (root) 
+canvas1.create_window(200, 140, window=entry1)
 
+def getSquareRoot ():  
+    x1 = entry1.get()
+    
+    label1 = tk.Label(root, text= float(x1)**0.5)
+    canvas1.create_window(200, 230, window=label1)
+    
+button1 = tk.Button(text='Get the Square Root', command=getSquareRoot)
+canvas1.create_window(200, 180, window=button1)
+
+while True:
+    root.update()
+
+#root.mainloop()

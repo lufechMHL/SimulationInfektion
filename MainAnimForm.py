@@ -10,6 +10,7 @@
 #import tkinter
 #python -python -m pip install -U pygame --user
 
+import tkinter as tk
 import pygame
 from pygame.locals import *
 
@@ -61,6 +62,22 @@ def simulate_humans():
     pygame.display.flip()
     #endregion
 
+    #region init tkinter
+    root= tk.Tk()
+    canvas1 = tk.Canvas(root, width = 400, height = 300)
+    canvas1.pack()
+    entry1 = tk.Entry (root) 
+    canvas1.create_window(200, 140, window=entry1)
+
+    def getSquareRoot ():  
+        x1 = entry1.get()
+        label1 = tk.Label(root, text= float(x1)**0.5)
+        canvas1.create_window(200, 230, window=label1)
+        
+    button1 = tk.Button(text='Get the Square Root', command=getSquareRoot)
+    canvas1.create_window(200, 180, window=button1)
+    #endregion
+
     #region main-loop
     while True:
         for event in pygame.event.get():
@@ -91,6 +108,7 @@ def simulate_humans():
         ticks = time.time() - start
         print(ticks)
 
+        root.update()
     #endregion
 #endregion 
 
