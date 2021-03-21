@@ -6,17 +6,26 @@
 #   2021-01-29  -   Erstellung
 #   2021-02-06  -   Erweiterung Bewegungssimulation Ausweichen vor anderen Personen
 #   2021-03-07  -   Erweiterung Speicherung der Position in einem Array/Cube zur schnelleren Suche benachbarter Personen
+#   2021-03-21  -   Umbau Grafikausgabe in HumanDataBase und Steuerung der Simulation über Parameter begonnen
 #=====================================================================================================
+
+#-------------- Module in CMD-Kommandozeile mittels pip installieren!!!! Einmalig auf dem lokalen Rechner
+#python -python -m pip install -U pygame --user
+#python -python -m pip install -U numpy --user
 
 import uuid
 #import dataclasses
 import random
 import time
 import math
+import colour
+import sys
 import datetime
 import numpy as np   #install via pip >>> python -m pip install -U numpy --user
+import pygame
+from pygame.locals import *
 
-#region classes
+#region data classes ==================================================================================================================
 #region HumanStat - Daten zum Darstellen in der GUI
 class HumanStat():
 
@@ -48,8 +57,6 @@ class HumanStat():
 
 #endregion
 
-
-
 #region HumanConfig - Configuration eines Objekts
 class HumanConfig():
     
@@ -77,8 +84,41 @@ class HumanConfig():
         self.DeltaAngel = 5.0
 
 #endregion
+#endregion
 
-#region Human - Klasse um die Bewegung und die Gesundheit der Objekte zu simulieren
+#region class global param
+class GlobalParam():
+    # width of the simulation window
+    simulation_window_width: int
+    # height of the simulation window
+    simulation_window_height: int
+    # background color 
+    simulation_backgroundcolor: int
+    # radius of the ball
+    simulation_ball_radius: int
+
+    simulation_scale_time_multiplicator: int
+    #x-range area in meters
+    simulation_area_xmeters: int
+    #y-range area in meters
+    simulation_area_ymeters: int 
+    #count of humans in the area
+    simulation_human_count: int
+
+    def __init__(self):
+        self.simulation_window_width=1300
+        self.simulation_window_height=800
+        self.simulation_backgroundcolor = colour.dark_green
+        self.simulation_ball_radius = 5
+        self.simulation_scale_time_multiplicator = 1.0
+        self.simulation_area_xmeters = 100
+        self.simulation_area_ymeters = 80
+        self.simulation_human_count = 30
+
+#endregion
+
+
+#region class Human - Klasse um die Bewegung und die Gesundheit der Objekte zu simulieren ============================================
 class Human():
 
     guid: str  #zufälliger Name für Objekte
@@ -206,7 +246,7 @@ class Human():
                 self.LastMovTime = self.TimeBase
 
         else:
-            self.SetCurrentPosInHumanArray(False)   #reset aktuelle Position im Array
+            #self.SetCurrentPosInHumanArray(False)   #reset aktuelle Position im Array
 
             DeltaRadius = self.TimeDelay * self.SpeedHuman 
             self.Status.DeltaPos.X = DeltaRadius * math.cos(self.Status.Angle / 360 * 2 * math.pi)
@@ -223,12 +263,12 @@ class Human():
                 self.Status.CurPos.X = self.Limit(self.Status.CurPos.X + DistX, self.maxX)
                 self.Status.CurPos.Y = self.Limit(self.Status.CurPos.Y + DistY, self.maxY)
 
-            self.SetCurrentPosInHumanArray(True)   #set aktuelle Position im Array >> neue Position
+            #self.SetCurrentPosInHumanArray(True)   #set aktuelle Position im Array >> neue Position
             self.LastMovTime = self.TimeBase
     #endregion
 
     #region UpdateAngle Berechnung des Winkels Laufrichtung
-    def UpdateAngle(self):
+    def UpdateAngle(self, HumanList):
 
         #region Suche nach Personen im Umkreis
         lastrad = self.Config.RadiusFar
@@ -386,7 +426,7 @@ class Human():
     #endregion
 
     #region Simulation Go
-    def Go(self):
+    def Go(self, humanList):
         #region Zeitstempel Zeitdifferenz berechnen
 
         self.TimeBase = datetime.datetime.now()
@@ -400,7 +440,7 @@ class Human():
         #endregion
 
         #region Berechnung des Winkels Laufrichtung
-        self.UpdateAngle()
+        self.UpdateAngle(humanList)
         #endregion
 
         #region Berechnung der Schrittweite
@@ -458,55 +498,131 @@ class Human():
 #endregion
 #endregion
 
-#region -- Main module -------------------------------------------------------------------------------------------
-
-#region constants
-#
-simulation_scale_time_multiplicator = 1.0
-#x-range area in meters
-simulation_area_xmeters = 100
-#y-range area in meters
-simulation_area_ymeters = 80
-#count of humans in the area
-simulation_human_count = 30
-#endregion
+#region -- Main module ===============================================================================================================
 
 #region globale variables
-HumanList = [] #List
-#init numpy-array für die Fläche mit z-Koordinate für die Humans in einer Meterfläche
-HumanArray = np.zeros((simulation_human_count,simulation_area_xmeters, simulation_area_ymeters ),dtype=int)
-#endregion
+class Simulation():
+    #region
+    HumanList = [] #List
+    HumanPara: GlobalParam
+    IsInitialized: int
+    #init numpy-array für die Fläche mit z-Koordinate für die Humans in einer Meterfläche
+    #HumanArray = np.zeros((simulation_human_count,simulation_area_xmeters, simulation_area_ymeters ),dtype=int)
+    #endregion
 
-#region module fuctions / interface 
-def GetAreaSize():
-    return simulation_area_xmeters, simulation_area_ymeters
+    #region module fuctions / interface 
+    def __init__(self):
+        self.IsInitialized = 0
+        self.HumanPara = GlobalParam()
+        self.HumanPara.simulation_window_width=1300
+        self.HumanPara.simulation_window_height=800
+        self.HumanPara.simulation_backgroundcolor = colour.dark_green
+        self.HumanPara.simulation_scale_time_multiplicator = 1.0
+        self.HumanPara.simulation_area_xmeters = 100
+        self.HumanPara.simulation_area_ymeters = 80
+        self.HumanPara.simulation_human_count = 30
+        self.HumanArray = np.zeros((self.HumanPara.simulation_human_count,self.HumanPara.simulation_area_xmeters, self.HumanPara.simulation_area_ymeters ),dtype=int)
+        print("Init Module done")
 
-def GetAreaHumanCount():
-    return simulation_area_xmeters, simulation_area_ymeters
+    def InitModule(self):
+        print("Init Module done")
 
-def Initialize():
-    for x in range(simulation_human_count):
-        newi = Human(0, 0, 0, 0, simulation_area_xmeters, simulation_area_ymeters)
-        HumanList.append(newi)
+    def GetAreaSize(self):
+        return self.HumanPara.simulation_area_xmeters, self.HumanPara.simulation_area_ymeters
 
-def PrintHumanStats():
-    for humi in HumanList:
-        x, y = humi.GetCurrentPosition()
-        print(humi.guid)
-        #print(x)
-        #print(y)    
-        print(humi.Status.DeltaPos.X)
-        print(humi.Status.DeltaPos.Y)
-        
-def Simulate():
-    start = time.time()
-    for humi in HumanList:
-        x, y = humi.Go()
-        #print(str(humi.guid) + " > " + str(x) + "," + str(y))    
+    def GetAreaHumanCount(self):
+        return self.HumanPara.simulation_area_xmeters, self.HumanPara.simulation_area_ymeters
 
-    ticks = time.time() - start
-    print(ticks)
-#endregion 
+    def Initialize(self,xmeters: int, ymeters: int, humancount: int):
+
+        #overwrite initialized values
+        if xmeters > 0 and ymeters > 0 and humancount > 0:
+            self.HumanPara.simulation_human_count = humancount
+            self.HumanPara.simulation_area_xmeters = xmeters
+            self.HumanPara.simulation_area_ymeters = ymeters
+
+        #region Init HumanList
+        self.HumanList.clear()
+
+        for x in range(self.HumanPara.simulation_human_count):
+            newi = Human(0, 0, 0, 0, self.HumanPara.simulation_area_xmeters, self.HumanPara.simulation_area_ymeters)
+            self.HumanList.append(newi)
+        #endrtegion
+
+        #region Init pygame
+        self.HumanPara.simulation_scale_meter2pixel = self.HumanPara.simulation_area_xmeters / self.HumanPara.simulation_window_width
+        self.HumanPara.simulation_window_height = math.floor( self.HumanPara.simulation_area_ymeters / self.HumanPara.simulation_scale_meter2pixel)
+        self.HumanPara.simulation_ball_radius = math.ceil(0.5 / self.HumanPara.simulation_scale_meter2pixel)
+        if self.HumanPara.simulation_ball_radius < 2:
+            self.HumanPara.simulation_ball_radius = 2
+
+        pygame.init()
+        pygame.display.set_caption('SimulationInfection St-El-Lu')
+        pygame.key.set_repeat(250, 125)
+
+        global screen 
+        screen = pygame.display.set_mode((self.HumanPara.simulation_window_width, self.HumanPara.simulation_window_height))
+        global font 
+        font = pygame.font.Font('consola.ttf', 20)
+        global table 
+        table = pygame.Surface((self.HumanPara.simulation_window_width, self.HumanPara.simulation_window_height))
+
+        table.fill(self.HumanPara.simulation_backgroundcolor)
+        screen.blit(table, (0,0))
+        pygame.display.flip()
+        #endregion
+
+        self.IsInitialized = 1
+        print("Initialize Simulation done")
+
+
+    def Terminate(self):
+        self.HumanList.clear()
+        pygame.display.quit()
+        self.IsInitialized = 0
+        print("Simulation terminated")
+
+    def Simulate(self):
+
+        start = time.time()
+        if len(self.HumanList) > 0:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == K_ESCAPE):
+                    sys.exit()
+
+
+            for x in range(len(self.HumanList)):  
+                #aktuelle grafik ausblenden - mit Background-color übermalen
+                xval = self.HumanList[x].Status.CurPos.X / self.HumanPara.simulation_scale_meter2pixel
+                yval = self.HumanList[x].Status.CurPos.Y / self.HumanPara.simulation_scale_meter2pixel
+                pygame.draw.circle(table, self.HumanPara.simulation_backgroundcolor,(xval,yval),self.HumanPara.simulation_ball_radius, 0)    
+
+                #neue Position berechnen
+                self.HumanList[x].Go(self.HumanList)
+
+                #neue Position zeichnen
+                xval = self.HumanList[x].Status.CurPos.X / self.HumanPara.simulation_scale_meter2pixel
+                yval = self.HumanList[x].Status.CurPos.Y / self.HumanPara.simulation_scale_meter2pixel
+                pygame.draw.circle(table, colour.light_yellow,(xval,yval),self.HumanPara.simulation_ball_radius, 0)    
+
+            #frame auf Display blenden
+            screen.blit(table, (0,0))
+            pygame.display.flip()
+
+        ticks = time.time() - start
+        print(ticks)
+
+
+    def PrintHumanStats(self):
+        for humi in self.HumanList:
+            x, y = humi.GetCurrentPosition()
+            print(humi.guid)
+            #print(x)
+            #print(y)    
+            print(humi.Status.DeltaPos.X)
+            print(humi.Status.DeltaPos.Y)
+            
+    #endregion 
 
 
 

@@ -18,6 +18,10 @@ button1 = tk.Button(text='Get the Square Root', command=getSquareRoot)
 canvas1.create_window(200, 180, window=button1)
 
 while True:
+
+    
+
+    
     root.update()
 
 #root.mainloop()

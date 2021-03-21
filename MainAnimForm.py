@@ -5,6 +5,7 @@
 #   Changelog
 #   2021-01-29  -   Erstellung
 #   2021-02-28  -   Umstellung Animation auf pygame
+#   2021-03-21  -   Verlagerung Pygame in ext. Modul HumanDatabase und Steuerung der Simulation über Dialog begonnen
 #=====================================================================================================
 
 #import tkinter
@@ -22,88 +23,109 @@ import HumanDataBase
 
 
 #region constant definitions 
-# width of the simulation window
-simulation_window_width=1300
-# height of the simulation window
-simulation_window_height=800
-# background color 
-simulation_backgroundcolor = colour.dark_green
-# radius of the ball
-simulation_ball_radius = 5
+#x-range area in meters
+simulation_area_xmeters = 200
+#y-range area in meters
+simulation_area_ymeters = 120
+#count of humans in the area
+simulation_human_count = 50
 # delay between successive frames in seconds
 simulation_refresh_seconds = 0.01
 #endregion
- 
-#region create and animate humans in an infinite loop
+
+#region MainForm
+
 #def simulate_humans(window, canvas):
 def simulate_humans():
     #region initialize Simulatorbase
-    maxx, maxy = HumanDataBase.GetAreaSize()
-
-    simulation_scale_meter2pixel = maxx / simulation_window_width
-    simulation_window_height = math.floor( maxy / simulation_scale_meter2pixel)
-    simulation_ball_radius = math.ceil(0.5 / simulation_scale_meter2pixel)
-
-    HumanDataBase.Initialize()
-    if simulation_ball_radius < 2:
-        simulation_ball_radius = 2
+    #maxx, maxy = HumanDataBase.GetAreaSize()
+    global Simulator
+    Simulator = HumanDataBase.Simulation()
+    Simulator.InitModule()
     #endregion
 
-    #region Init pygame
-    pygame.init()
-    pygame.display.set_caption('SimulationInfection St-El-Lu')
-    pygame.key.set_repeat(250, 125)
-    screen = pygame.display.set_mode((simulation_window_width, simulation_window_height))
-    font = pygame.font.Font('consola.ttf', 20)
+    #region Event-Handler 
+    #region Event-handler für Button StartSim
+    def setStartSim ():  
 
-    table = pygame.Surface((simulation_window_width, simulation_window_height))
-    table.fill(simulation_backgroundcolor)
-    screen.blit(table, (0,0))
-    pygame.display.flip()
+        if entryXmeters.get() != "":
+            #Input einlesen und prüfen
+            try:
+                simulation_area_xmeters = int(entryXmeters.get())
+            except:
+                entryXmeters.setvar("")
+                simulation_area_xmeters = 0
+        else:
+            simulation_area_xmeters = 200
+
+        if entryYmeters.get() != "":
+            #Input einlesen und prüfen
+            try:
+                simulation_area_ymeters = int(entryYmeters.get())
+            except:
+                entryYmeters.setvar("")
+                simulation_area_ymeters = 0
+        else:
+            simulation_area_ymeters = 100
+
+        if entryHumans.get() != "":
+            #Input einlesen und prüfen
+            try:
+                simulation_human_count = int(entryHumans.get())
+            except:
+                entryHumans.setvar("")
+                simulation_human_count = 0
+        else:
+            simulation_human_count = 30
+
+        #Wenn Input gültig ist, Initialisierung ausführen
+        if simulation_area_xmeters > 0 and simulation_area_ymeters > 0 and simulation_human_count > 0:
+            Simulator.Initialize(simulation_area_xmeters, simulation_area_ymeters, simulation_human_count)
+    #endregion
+
+    #region Event-Handler für Button StopSim
+    def setStopSim ():  
+        Simulator.Terminate()
+    #endregion
+
+
     #endregion
 
     #region init tkinter
     root= tk.Tk()
     canvas1 = tk.Canvas(root, width = 400, height = 300)
     canvas1.pack()
-    entry1 = tk.Entry (root) 
-    canvas1.create_window(200, 140, window=entry1)
+    #Definition der Eingabefelder
+    entryXmeters = tk.Entry (root) 
+    entryYmeters = tk.Entry (root) 
+    entryHumans = tk.Entry (root) 
 
-    def getSquareRoot ():  
-        simulation_ball_radius = int(entry1.get())
-        #label1 = tk.Label(root, text= float(x1)**0.5)
-        canvas1.create_window(200, 230, window=label1)
-        
-    button1 = tk.Button(text='Get the Square Root', command=getSquareRoot)
-    canvas1.create_window(200, 180, window=button1)
+    #Definition der Labels/Bezeichner
+    label1 = tk.Label(root, text= "Breite X Meter")
+    label2 = tk.Label(root, text= "Höhe Y Meter")
+    label3 = tk.Label(root, text= "Anz Personen")
+
+    #Erzeugung der Windows zu den obigen Objekten im Windows
+    canvas1.create_window(50, 100, window=label1)    
+    canvas1.create_window(200, 100, window=entryXmeters)
+    canvas1.create_window(50, 130, window=label2)    
+    canvas1.create_window(200, 130, window=entryYmeters)
+    canvas1.create_window(50, 160, window=label3)    
+    canvas1.create_window(200, 160, window=entryHumans)
+
+    #Definition der Funktionsknöpfe Button 
+    buttonStart = tk.Button(text='Start Simulation', command=setStartSim) #Verknüpfung mit dem Event-Handler!!!!
+    buttonStop = tk.Button(text='Stop Simulation', command=setStopSim)  #Verknüpfung mit dem Event-Handler!!!!
+    canvas1.create_window(50, 200, window=buttonStart)
+    canvas1.create_window(200, 200, window=buttonStop)
     #endregion
 
     #region main-loop
     while True:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == K_ESCAPE):
-                sys.exit()
-
         start = time.time()
 
-        for x in range(len(HumanDataBase.HumanList)):  
-            #aktuelle grafik ausblenden - mit Background-color übermalen
-            xval = HumanDataBase.HumanList[x].Status.CurPos.X / simulation_scale_meter2pixel
-            yval = HumanDataBase.HumanList[x].Status.CurPos.Y / simulation_scale_meter2pixel
-            pygame.draw.circle(table, simulation_backgroundcolor,(xval,yval),simulation_ball_radius, 0)    
-
-            #neue Position berechnen
-            HumanDataBase.HumanList[x].Go()
-
-            #neue Position zeichnen
-            xval = HumanDataBase.HumanList[x].Status.CurPos.X / simulation_scale_meter2pixel
-            yval = HumanDataBase.HumanList[x].Status.CurPos.Y / simulation_scale_meter2pixel
-            pygame.draw.circle(table, colour.light_yellow,(xval,yval),simulation_ball_radius, 0)    
-
-        #frame auf Display blenden
-        screen.blit(table, (0,0))
-        pygame.display.flip()
-        time.sleep(simulation_refresh_seconds)
+        #Simulation ausführen im Modul HumanDataBase
+        Simulator.Simulate()
 
         ticks = time.time() - start
         print(ticks)
