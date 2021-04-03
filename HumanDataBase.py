@@ -38,10 +38,11 @@ class HumanStat():
             self.X = X
             self.Y = Y
 
-    Origin: Position  #Herkunft
-    CurPos: Position  #Current Position
-    Destination: Position  #Ziel
-    DeltaPos: Position #Delta-Weg 
+    Origin: Position  #Herkunft (Meter)
+    CurPos: Position  #Current Position (Meter)
+    Destination: Position  #Ziel (Meter)
+    DeltaPos: Position #Delta-Weg (Meter)
+    PicturePos: Position  #Current Position in Window (Pixel)
     Speed: float
     Angle: float   #Winkel zu Destination
     StopRadius: float
@@ -52,6 +53,7 @@ class HumanStat():
         self.CurPos = self.Position(0.0, 0.0)
         self.Destination = self.Position(0.0, 0.0)
         self.DeltaPos = self.Position(0.0, 0.0)
+        self.PicturePos = self.Position(0.0, 0.0)
         self.Angle = 0.0
      
 
@@ -92,28 +94,31 @@ class GlobalParam():
     simulation_window_width: int
     # height of the simulation window
     simulation_window_height: int
+    # refresh cycle window in sec
+    simulation_window_update_sec: float
     # background color 
     simulation_backgroundcolor: int
     # radius of the ball
     simulation_ball_radius: int
-
-    simulation_scale_time_multiplicator: int
     #x-range area in meters
     simulation_area_xmeters: int
     #y-range area in meters
     simulation_area_ymeters: int 
     #count of humans in the area
     simulation_human_count: int
+    #timelaps value
+    simulation_time_lapse: float
 
     def __init__(self):
         self.simulation_window_width=1300
         self.simulation_window_height=800
         self.simulation_backgroundcolor = colour.dark_green
         self.simulation_ball_radius = 5
-        self.simulation_scale_time_multiplicator = 1.0
         self.simulation_area_xmeters = 100
         self.simulation_area_ymeters = 80
         self.simulation_human_count = 30
+        self.simulation_time_lapse = 1.0
+        self.simulation_window_update_sec = 0.2
 
 #endregion
 
@@ -287,6 +292,8 @@ class Human():
                 DeltaX = HumanList[hidx].Status.CurPos.X - self.Status.CurPos.X
                 DeltaY = HumanList[hidx].Status.CurPos.Y - self.Status.CurPos.Y
                 Radius = math.sqrt(math.pow(DeltaX, 2) + math.pow(DeltaY, 2))
+                if Radius == 0:
+                    Radius = 0.001
                 Angel = math.acos(DeltaX / Radius) * 180 / math.pi
                 if DeltaY < 0:
                     Angel = Angel * -1
@@ -426,13 +433,15 @@ class Human():
     #endregion
 
     #region Simulation Go
-    def Go(self, humanList):
+    def Go(self, humanList, timelapseVal):
         #region Zeitstempel Zeitdifferenz berechnen
 
         self.TimeBase = datetime.datetime.now()
         timedelta = (datetime.datetime.now() - self.TimeStamp) 
         self.TimeDelay = timedelta.total_seconds()
         self.TimeStamp = datetime.datetime.now()
+        #Timelapse 
+        self.TimeDelay = self.TimeDelay * timelapseVal
         #endregion
 
         #region UpdateSpeed
@@ -506,6 +515,11 @@ class Simulation():
     HumanList = [] #List
     HumanPara: GlobalParam
     IsInitialized: int
+    LastRepaint: time
+    LastDuration: float
+    SimuDuration: float
+    SimuTimeStamp: time
+
     #init numpy-array für die Fläche mit z-Koordinate für die Humans in einer Meterfläche
     #HumanArray = np.zeros((simulation_human_count,simulation_area_xmeters, simulation_area_ymeters ),dtype=int)
     #endregion
@@ -513,11 +527,16 @@ class Simulation():
     #region module fuctions / interface 
     def __init__(self):
         self.IsInitialized = 0
+        self.LastRepaint = time.time()
+        self.SimuTimeStamp = time.time()
+        self.LastDuration = 0.0
+        self.SimuDuration = 0.0
+
         self.HumanPara = GlobalParam()
         self.HumanPara.simulation_window_width=1300
         self.HumanPara.simulation_window_height=800
         self.HumanPara.simulation_backgroundcolor = colour.dark_green
-        self.HumanPara.simulation_scale_time_multiplicator = 1.0
+        self.HumanPara.simulation_time_lapse = 1.0
         self.HumanPara.simulation_area_xmeters = 100
         self.HumanPara.simulation_area_ymeters = 80
         self.HumanPara.simulation_human_count = 30
@@ -532,6 +551,10 @@ class Simulation():
 
     def GetAreaHumanCount(self):
         return self.HumanPara.simulation_area_xmeters, self.HumanPara.simulation_area_ymeters
+
+    def GetSimulationTime(self):
+        timetup = time.gmtime(self.SimuDuration)
+        return time.strftime('Tage %d %H:%M:%SZ', timetup)
 
     def Initialize(self,xmeters: int, ymeters: int, humancount: int):
 
@@ -570,6 +593,8 @@ class Simulation():
         table.fill(self.HumanPara.simulation_backgroundcolor)
         screen.blit(table, (0,0))
         pygame.display.flip()
+        self.SimuDuration = 0.0
+        self.SimuTimeStamp = time.time()
         #endregion
 
         self.IsInitialized = 1
@@ -582,7 +607,29 @@ class Simulation():
         self.IsInitialized = 0
         print("Simulation terminated")
 
-    def Simulate(self):
+    #Funktion zeichnet einen Kreis/Bubbel für einen Human
+    def PaintHuman(self, Idx: int):
+        #aktuelle grafik ausblenden - mit Background-color übermalen
+        xval = self.HumanList[Idx].Status.PicturePos.X
+        yval = self.HumanList[Idx].Status.PicturePos.Y
+        pygame.draw.circle(table, self.HumanPara.simulation_backgroundcolor,(xval,yval),self.HumanPara.simulation_ball_radius, 0)    
+
+        #neue Position zeichnen
+        xval = self.HumanList[Idx].Status.CurPos.X / self.HumanPara.simulation_scale_meter2pixel
+        yval = self.HumanList[Idx].Status.CurPos.Y / self.HumanPara.simulation_scale_meter2pixel
+        pygame.draw.circle(table, colour.light_yellow,(xval,yval),self.HumanPara.simulation_ball_radius, 0)    
+
+        #zuletzt gezeichnete Position speichern
+        self.HumanList[Idx].Status.PicturePos.X = xval
+        self.HumanList[Idx].Status.PicturePos.Y = yval
+
+
+
+    def Simulate(self, timelapseVal: float):
+
+        self.HumanPara.simulation_time_lapse = timelapseVal
+        self.SimuDuration = self.SimuDuration + (time.time() - self.SimuTimeStamp) * self.HumanPara.simulation_time_lapse
+        self.SimuTimeStamp = time.time()
 
         start = time.time()
         if len(self.HumanList) > 0:
@@ -590,27 +637,25 @@ class Simulation():
                 if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == K_ESCAPE):
                     sys.exit()
 
-
+            #Simulation Humans 
             for x in range(len(self.HumanList)):  
-                #aktuelle grafik ausblenden - mit Background-color übermalen
-                xval = self.HumanList[x].Status.CurPos.X / self.HumanPara.simulation_scale_meter2pixel
-                yval = self.HumanList[x].Status.CurPos.Y / self.HumanPara.simulation_scale_meter2pixel
-                pygame.draw.circle(table, self.HumanPara.simulation_backgroundcolor,(xval,yval),self.HumanPara.simulation_ball_radius, 0)    
-
                 #neue Position berechnen
-                self.HumanList[x].Go(self.HumanList)
+                self.HumanList[x].Go(self.HumanList, self.HumanPara.simulation_time_lapse)
 
-                #neue Position zeichnen
-                xval = self.HumanList[x].Status.CurPos.X / self.HumanPara.simulation_scale_meter2pixel
-                yval = self.HumanList[x].Status.CurPos.Y / self.HumanPara.simulation_scale_meter2pixel
-                pygame.draw.circle(table, colour.light_yellow,(xval,yval),self.HumanPara.simulation_ball_radius, 0)    
+            #Refresh Window in a cycle of simulation_window_update_sec
+            if (start - self.LastRepaint) > self.HumanPara.simulation_window_update_sec:
+                self.LastRepaint = start
+                for x in range(len(self.HumanList)):  
+                    self.PaintHuman(x)
 
-            #frame auf Display blenden
-            screen.blit(table, (0,0))
-            pygame.display.flip()
+                #frame auf Display blenden
 
-        ticks = time.time() - start
-        print(ticks)
+
+                screen.blit(table, (0,0))
+                pygame.display.flip()
+
+        self.LastDuration = time.time() - start
+
 
 
     def PrintHumanStats(self):

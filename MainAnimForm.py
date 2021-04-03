@@ -22,21 +22,25 @@ import math
 import HumanDataBase
 
 
-#region constant definitions 
-#x-range area in meters
-simulation_area_xmeters = 200
-#y-range area in meters
-simulation_area_ymeters = 120
-#count of humans in the area
-simulation_human_count = 50
-# delay between successive frames in seconds
-simulation_refresh_seconds = 0.01
-#endregion
 
 #region MainForm
 
 #def simulate_humans(window, canvas):
 def simulate_humans():
+
+    #region constant definitions 
+    #x-range area in meters
+    global simulation_area_xmeters
+    #y-range area in meters
+    global simulation_area_ymeters
+    #count of humans in the area
+    global simulation_human_count
+    # delay between successive frames in seconds
+    global simulation_timelapse_val
+    simulation_timelapse_val = 1.0
+    #endregion
+
+
     #region initialize Simulatorbase
     #maxx, maxy = HumanDataBase.GetAreaSize()
     global Simulator
@@ -88,12 +92,27 @@ def simulate_humans():
         Simulator.Terminate()
     #endregion
 
+    #region Event-Handler für Button Timelapse control
+    def setIncTime ():  
+        global simulation_timelapse_val
+        simulation_timelapse_val = simulation_timelapse_val * 2
+        print(simulation_timelapse_val)
+
+    def setDecTime ():  
+        global simulation_timelapse_val
+        simulation_timelapse_val = simulation_timelapse_val / 2
+        if simulation_timelapse_val < 1.0:
+            simulation_timelapse_val = 1.0
+
+        print(simulation_timelapse_val)
+
+    #endregion
 
     #endregion
 
     #region init tkinter
     root= tk.Tk()
-    canvas1 = tk.Canvas(root, width = 400, height = 300)
+    canvas1 = tk.Canvas(root, width = 400, height = 500)
     canvas1.pack()
     #Definition der Eingabefelder
     entryXmeters = tk.Entry (root) 
@@ -105,6 +124,10 @@ def simulate_humans():
     label2 = tk.Label(root, text= "Höhe Y Meter")
     label3 = tk.Label(root, text= "Anz Personen")
 
+    timetext = tk.StringVar()
+    timetext.set("Test")
+    label4 = tk.Label(root, textvariable=timetext)
+
     #Erzeugung der Windows zu den obigen Objekten im Windows
     canvas1.create_window(50, 100, window=label1)    
     canvas1.create_window(200, 100, window=entryXmeters)
@@ -112,12 +135,17 @@ def simulate_humans():
     canvas1.create_window(200, 130, window=entryYmeters)
     canvas1.create_window(50, 160, window=label3)    
     canvas1.create_window(200, 160, window=entryHumans)
+    canvas1.create_window(150, 300, window=label4)    
 
     #Definition der Funktionsknöpfe Button 
     buttonStart = tk.Button(text='Start Simulation', command=setStartSim) #Verknüpfung mit dem Event-Handler!!!!
     buttonStop = tk.Button(text='Stop Simulation', command=setStopSim)  #Verknüpfung mit dem Event-Handler!!!!
+    buttonTimeInc = tk.Button(text='schneller', command=setIncTime) #Verknüpfung mit dem Event-Handler!!!!
+    buttonTimeDec = tk.Button(text='langsamer', command=setDecTime)  #Verknüpfung mit dem Event-Handler!!!!
     canvas1.create_window(50, 200, window=buttonStart)
     canvas1.create_window(200, 200, window=buttonStop)
+    canvas1.create_window(50, 250, window=buttonTimeDec)
+    canvas1.create_window(200, 250, window=buttonTimeInc)
     #endregion
 
     #region main-loop
@@ -125,10 +153,13 @@ def simulate_humans():
         start = time.time()
 
         #Simulation ausführen im Modul HumanDataBase
-        Simulator.Simulate()
+        Simulator.Simulate(simulation_timelapse_val)
+
+        timestr = Simulator.GetSimulationTime()
 
         ticks = time.time() - start
-        print(ticks)
+        print(timestr)
+        timetext.set(timestr)        
 
         root.update()
     #endregion
