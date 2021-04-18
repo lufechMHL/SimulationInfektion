@@ -60,7 +60,7 @@ def simulate_humans():
                 entryXmeters.setvar("")
                 simulation_area_xmeters = 0
         else:
-            simulation_area_xmeters = 200
+            simulation_area_xmeters = 300
 
         if entryYmeters.get() != "":
             #Input einlesen und prüfen
@@ -70,7 +70,7 @@ def simulate_humans():
                 entryYmeters.setvar("")
                 simulation_area_ymeters = 0
         else:
-            simulation_area_ymeters = 100
+            simulation_area_ymeters = 200
 
         if entryHumans.get() != "":
             #Input einlesen und prüfen
@@ -80,7 +80,7 @@ def simulate_humans():
                 entryHumans.setvar("")
                 simulation_human_count = 0
         else:
-            simulation_human_count = 30
+            simulation_human_count = 50
 
         #Wenn Input gültig ist, Initialisierung ausführen
         if simulation_area_xmeters > 0 and simulation_area_ymeters > 0 and simulation_human_count > 0:
@@ -149,6 +149,7 @@ def simulate_humans():
     #endregion
 
     #region main-loop
+    print("Simulation started")
     while True:
         start = time.time()
 
@@ -158,7 +159,7 @@ def simulate_humans():
         timestr = Simulator.GetSimulationTime()
 
         ticks = time.time() - start
-        print(timestr)
+        #print(timestr)
         timetext.set(timestr)        
 
         root.update()

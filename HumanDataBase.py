@@ -7,6 +7,8 @@
 #   2021-02-06  -   Erweiterung Bewegungssimulation Ausweichen vor anderen Personen
 #   2021-03-07  -   Erweiterung Speicherung der Position in einem Array/Cube zur schnelleren Suche benachbarter Personen
 #   2021-03-21  -   Umbau Grafikausgabe in HumanDataBase und Steuerung der Simulation über Parameter begonnen
+#   2021-04-06  -   Zeitraffer implementiert
+#   2021-04-18  -   Infektionslogik implementiert
 #=====================================================================================================
 
 #-------------- Module in CMD-Kommandozeile mittels pip installieren!!!! Einmalig auf dem lokalen Rechner
@@ -23,9 +25,18 @@ import sys
 import datetime
 import numpy as np   #install via pip >>> python -m pip install -U numpy --user
 import pygame
+from enum import Enum
 from pygame.locals import *
 
 #region data classes ==================================================================================================================
+
+class InfectionStat(Enum):
+    HEALTHY = 1
+    INFECTED = 2
+    SICK = 3
+    IMMUNE = 4
+    DEATH = 5
+
 #region HumanStat - Daten zum Darstellen in der GUI
 class HumanStat():
 
@@ -38,6 +49,7 @@ class HumanStat():
             self.X = X
             self.Y = Y
 
+
     Origin: Position  #Herkunft (Meter)
     CurPos: Position  #Current Position (Meter)
     Destination: Position  #Ziel (Meter)
@@ -47,7 +59,12 @@ class HumanStat():
     Angle: float   #Winkel zu Destination
     StopRadius: float
     StopAngle: float
-
+    RecvInfections: int #Menge an empfangenen Viren / Ansteckung durch andere Personen
+    InfectionLevel: int #Grad der Infektion / eigene Virenlast
+    CurInfectionStat: int #Infektionsstatus/grad
+    InfectionTimeStamp: datetime.datetime 
+    InfUpdateTimeStamp: datetime.datetime 
+    
     def __init__(self):
         self.Origin = self.Position(0.0, 0.0)
         self.CurPos = self.Position(0.0, 0.0)
@@ -55,6 +72,11 @@ class HumanStat():
         self.DeltaPos = self.Position(0.0, 0.0)
         self.PicturePos = self.Position(0.0, 0.0)
         self.Angle = 0.0
+        self.RecvInfections = 0
+        self.InfectionLevel = 0
+        self.CurInfectionStat = InfectionStat.HEALTHY
+        self.InfectionTimeStamp = datetime.datetime.now()
+        self.InfUpdateTimeStamp = datetime.datetime.now()
      
 
 #endregion
@@ -67,6 +89,7 @@ class HumanConfig():
     
     RadiusFar: float    #Ab diesem Radius abbremsen
     RadiusNear: float   #Nicht näher, stopp
+    InfectionRadius: float #Abstand Inektionsschutz
     
     Acceleration: float
     MaxDistance: float
@@ -84,6 +107,7 @@ class HumanConfig():
         self.Acceleration = Acceleration
         self.MaxDistance = MaxDistance
         self.DeltaAngel = 5.0
+        self.InfectionRadius = RadiusFar #(RadiusFar - RadiusNear)/2 + RadiusNear #anpassbar im ersten Wurf genau zwischen RadiusFar und RadiusNear
 
 #endregion
 #endregion
@@ -299,6 +323,12 @@ class Human():
                     Angel = Angel * -1
                 #endregion
 
+                #region Übertragung der eigenen Infektion auf die Person gegenüber ... passt hier gut rein, weil wir den Abstand berechnet haben
+                if Radius < self.Config.InfectionRadius and self.Status.InfectionLevel > 0: 
+                    HumanList[hidx].SetInfection(self.Status.InfectionLevel)
+                    print(hidx, Radius, self.Status.InfectionLevel )
+                #region
+
                 #region Abstand kleiner als letzter Abstand - Übernahme in Berechnung
                 if Radius < lastrad: #wenn die Person näher ist als die vorherige - neue Person merken
                     DiffAngle = self.GetAngleDiffBetween(self.Status.Angle, Angel)
@@ -393,6 +423,77 @@ class Human():
         return RadiusNext
     #endregion
 
+    #region UpdateInfection Berechnung der Infektion
+    def UpdateInfection(self):
+        #Status Healthy
+        if self.Status.CurInfectionStat == InfectionStat.HEALTHY: 
+            if self.Status.RecvInfections > 0:
+                self.Status.InfectionLevel = self.Status.RecvInfections #empfangene Viren übernehmen
+                self.Status.RecvInfections = 0    #und wieder zurück setzen
+
+            timedelta = self.TimeBase - self.Status.InfUpdateTimeStamp
+            if timedelta.total_seconds() > 10 and self.Status.InfectionLevel > 1: 
+                #self.Status.InfectionLevel = self.Status.InfectionLevel - 1 
+                self.Status.InfUpdateTimeStamp = self.TimeBase
+
+            if self.Status.InfectionLevel > 5:                     
+                self.Status.CurInfectionStat = InfectionStat.INFECTED   #Status auf Infected
+                self.Status.InfectionTimeStamp = self.TimeBase
+                self.Status.InfUpdateTimeStamp = self.TimeBase
+
+        #Status Infected ... later
+        if self.Status.CurInfectionStat == InfectionStat.INFECTED:
+            #keine weitere Übernahme anderer Viren bei bereits infiziertem Zustand
+            self.Status.RecvInfections = 0    #und wieder zurück setzen
+
+            timedelta = self.TimeBase - self.Status.InfUpdateTimeStamp
+            if timedelta.total_seconds() > 10: 
+                self.Status.InfectionLevel = self.Status.InfectionLevel + 10 #
+                self.Status.InfUpdateTimeStamp = self.TimeBase
+
+            if self.Status.InfectionLevel > 100:                     
+                self.Status.CurInfectionStat = InfectionStat.SICK       #Status auf Infected
+
+        #Status Sick
+        if self.Status.CurInfectionStat == InfectionStat.SICK:
+            if self.Status.RecvInfections > 0:
+                # Übernahme noch unklar
+                self.Status.RecvInfections = 0    #und wieder zurück setzen
+
+            timedelta = self.TimeBase - self.Status.InfUpdateTimeStamp
+            if timedelta.total_seconds() > 10: 
+                self.Status.InfectionLevel = self.Status.InfectionLevel - 1 #Selbstheilung 
+                self.Status.InfUpdateTimeStamp = self.TimeBase
+
+            if self.Status.InfectionLevel < 20:                     
+                self.Status.CurInfectionStat = InfectionStat.IMMUNE       #Status auf Immun
+
+            if self.Status.InfectionLevel > 200:                     
+                self.Status.CurInfectionStat = InfectionStat.DEATH       #Status auf Death
+
+        #Status Immune
+        if self.Status.CurInfectionStat == InfectionStat.IMMUNE:
+            self.Status.InfectionLevel = 0 #damit er keinen mehr infiziert
+
+        #Status Death
+        if self.Status.CurInfectionStat == InfectionStat.DEATH:
+            self.Status.InfectionLevel = 0 #damit er keinen mehr infiziert
+    #endregion
+
+    #region SetInfection 
+    def SetInfection(self, InfectionValue: int):
+        if InfectionValue > 100:
+            InfectionValue = 10 
+        elif InfectionValue > 10:
+            InfectionValue = InfectionValue / 10 
+        else:
+            InfectionValue = 1
+
+        self.Status.RecvInfections = self.Status.RecvInfections + InfectionValue
+
+    #endregion
+
+
     #region Positions-Array verwalten
     #Funktion ermittelt den eigenen Index in der globalen Liste HumanList
     def GetMyIndexInHumanList(self):
@@ -408,6 +509,7 @@ class Human():
         tempx = math.floor( self.Status.CurPos.X) 
         tempy = math.floor( self.Status.CurPos.Y) 
         idx = self.GetMyIndexInHumanList()
+
         if SetPos == True:
             HumanArray[idx, tempx, tempy] = 1
         else:
@@ -454,6 +556,10 @@ class Human():
 
         #region Berechnung der Schrittweite
         self.UpdatePosition()
+        #endregion
+
+        #region Berechnung des eigenen Infektionsstatus
+        self.UpdateInfection()
         #endregion
 
         return (self.Status.CurPos.X, self.Status.CurPos.Y)
@@ -509,9 +615,8 @@ class Human():
 
 #region -- Main module ===============================================================================================================
 
-#region globale variables
 class Simulation():
-    #region
+    #region global Variables
     HumanList = [] #List
     HumanPara: GlobalParam
     IsInitialized: int
@@ -524,7 +629,7 @@ class Simulation():
     #HumanArray = np.zeros((simulation_human_count,simulation_area_xmeters, simulation_area_ymeters ),dtype=int)
     #endregion
 
-    #region module fuctions / interface 
+    #region Simulationmodule fuctions / interface 
     def __init__(self):
         self.IsInitialized = 0
         self.LastRepaint = time.time()
@@ -554,7 +659,7 @@ class Simulation():
 
     def GetSimulationTime(self):
         timetup = time.gmtime(self.SimuDuration)
-        return time.strftime('Tage %d %H:%M:%SZ', timetup)
+        return time.strftime('Tage %d %H:%M:%S', timetup)
 
     def Initialize(self,xmeters: int, ymeters: int, humancount: int):
 
@@ -570,7 +675,9 @@ class Simulation():
         for x in range(self.HumanPara.simulation_human_count):
             newi = Human(0, 0, 0, 0, self.HumanPara.simulation_area_xmeters, self.HumanPara.simulation_area_ymeters)
             self.HumanList.append(newi)
-        #endrtegion
+
+        self.HumanList[0].Status.RecvInfections = 20 #den ersten Menschen infizieren 
+        #endregion
 
         #region Init pygame
         self.HumanPara.simulation_scale_meter2pixel = self.HumanPara.simulation_area_xmeters / self.HumanPara.simulation_window_width
@@ -614,10 +721,24 @@ class Simulation():
         yval = self.HumanList[Idx].Status.PicturePos.Y
         pygame.draw.circle(table, self.HumanPara.simulation_backgroundcolor,(xval,yval),self.HumanPara.simulation_ball_radius, 0)    
 
+        #Farbe bestimmen
+        setcolour = colour.light_green
+        if self.HumanList[Idx].Status.CurInfectionStat == InfectionStat.INFECTED:
+            setcolour = colour.light_red
+
+        if self.HumanList[Idx].Status.CurInfectionStat == InfectionStat.SICK:
+            setcolour = colour.red
+
+        if self.HumanList[Idx].Status.CurInfectionStat == InfectionStat.IMMUNE:
+            setcolour = colour.blue
+
+        if self.HumanList[Idx].Status.CurInfectionStat == InfectionStat.DEATH:
+            setcolour = colour.dark_grey
+
         #neue Position zeichnen
         xval = self.HumanList[Idx].Status.CurPos.X / self.HumanPara.simulation_scale_meter2pixel
         yval = self.HumanList[Idx].Status.CurPos.Y / self.HumanPara.simulation_scale_meter2pixel
-        pygame.draw.circle(table, colour.light_yellow,(xval,yval),self.HumanPara.simulation_ball_radius, 0)    
+        pygame.draw.circle(table, setcolour,(xval,yval),self.HumanPara.simulation_ball_radius, 0)    
 
         #zuletzt gezeichnete Position speichern
         self.HumanList[Idx].Status.PicturePos.X = xval
@@ -669,5 +790,6 @@ class Simulation():
             
     #endregion 
 
+#endregion
 
 
