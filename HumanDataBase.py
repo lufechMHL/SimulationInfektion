@@ -132,6 +132,10 @@ class GlobalParam():
     simulation_human_count: int
     #timelaps value
     simulation_time_lapse: float
+    #initial number of infected humans
+    simulation_start_inf: int
+    #maximum movement distance
+    simulation_move_radius: float
 
     def __init__(self):
         self.simulation_window_width=1300
@@ -143,6 +147,8 @@ class GlobalParam():
         self.simulation_human_count = 30
         self.simulation_time_lapse = 1.0
         self.simulation_window_update_sec = 0.2
+        self.simulation_move_radius = 50.0
+
 
 #endregion
 
@@ -165,7 +171,7 @@ class Human():
     MyIndexInHumanList: int
  
     #region constructor
-    def __init__(self, srcx, srcy, dstx, dsty, maxx, maxy):
+    def __init__(self, srcx, srcy, dstx, dsty, maxx, maxy, maxdist):
         self.Status = HumanStat()
         self.guid = uuid.uuid4()
         if srcx == 0 and srcy == 0:
@@ -175,16 +181,23 @@ class Human():
             self.Status.CurPos.X = srcx
             self.Status.CurPos.Y = srcy
 
-        if dstx == 0 and dsty == 0:
-            self.Status.Destination.X = self.Limit(random.uniform(0.0, maxx), maxx)
-            self.Status.Destination.Y = self.Limit(random.uniform(0.0, maxy), maxy)
-        else:
-            self.Status.Destination.X = dstx
-            self.Status.Destination.Y = dsty
         self.Status.Origin.X = self.Status.CurPos.X
         self.Status.Origin.Y = self.Status.CurPos.Y
 
-        self.Config = HumanConfig(1.3, 0.5, 2.0, 0.3, 0.5, 150)
+        if dstx == 0 and dsty == 0:
+            self.Status.Destination.X = self.Status.CurPos.X
+            self.Status.Destination.Y = self.Status.CurPos.Y
+        else:
+            self.Status.Destination.X = dstx
+            self.Status.Destination.Y = dsty
+
+        HcMaxSpeed: float = 1.3         #maximum speed in m/s
+        HcMinSpeed: float = 0.5         #minimum speed in m/s
+        HcRadiusFar: float = 2.0        #radius far as first distance for checking other people
+        HcRadiusNear: float = 0.3       #radius near as safe-stop radius to other people
+        HcAcceleration: float = 0.5     #acceleration of people 
+        HcMaxDistance: float = maxdist  #maximum distance of movements
+        self.Config = HumanConfig(HcMaxSpeed, HcMinSpeed, HcRadiusFar, HcRadiusNear, HcAcceleration, HcMaxDistance)
         self.Status.Speed = random.uniform(self.Config.MinSpeed, self.Config.MaxSpeed)
         self.Status.StopRadius = self.Config.RadiusFar
         self.Status.StopAngle = 0.0
@@ -299,14 +312,14 @@ class Human():
     #region UpdateAngle Berechnung des Winkels Laufrichtung
     def UpdateAngle(self, HumanList):
 
-        #region Suche nach Personen im Umkreis
+        # Suche nach Personen im Umkreis
         lastrad = self.Config.RadiusFar
         RadiusNext = lastrad
 
         #Über die Matrix HumanArray werden jetzt nur die Humans ermittelt, die sich im Umkreis von RadiusFar befinden
         #humansAround = self.CheckIfHumanAround()
 
-        #Schleife über die Liste aller Humans im Umkreis RadiusFar
+        #region Schleife über die Liste aller Humans im Umkreis RadiusFar
         #for hidx in humansAround:  
         for hidx in range(len(HumanList)):
             tagstr = HumanList[hidx].GetGuid()
@@ -422,6 +435,8 @@ class Human():
 
         return RadiusNext
     #endregion
+        #endregion
+
 
     #region UpdateInfection Berechnung der Infektion
     def UpdateInfection(self):
@@ -645,6 +660,9 @@ class Simulation():
         self.HumanPara.simulation_area_xmeters = 100
         self.HumanPara.simulation_area_ymeters = 80
         self.HumanPara.simulation_human_count = 30
+        self.HumanPara.simulation_start_inf = 2
+        self.HumanPara.simulation_move_radius = 50.0
+
         self.HumanArray = np.zeros((self.HumanPara.simulation_human_count,self.HumanPara.simulation_area_xmeters, self.HumanPara.simulation_area_ymeters ),dtype=int)
         print("Init Module done")
 
@@ -661,22 +679,25 @@ class Simulation():
         timetup = time.gmtime(self.SimuDuration)
         return time.strftime('Tage %d %H:%M:%S', timetup)
 
-    def Initialize(self,xmeters: int, ymeters: int, humancount: int):
+    def Initialize(self,xmeters: int, ymeters: int, humancount: int, infectedcount: int, maxmovedist: float):
 
         #overwrite initialized values
-        if xmeters > 0 and ymeters > 0 and humancount > 0:
+        if xmeters > 0 and ymeters > 0 and humancount > 0 and maxmovedist > 0 and infectedcount > 0:
             self.HumanPara.simulation_human_count = humancount
             self.HumanPara.simulation_area_xmeters = xmeters
             self.HumanPara.simulation_area_ymeters = ymeters
+            self.HumanPara.simulation_start_inf = infectedcount
+            self.HumanPara.simulation_move_radius = maxmovedist
 
         #region Init HumanList
         self.HumanList.clear()
 
         for x in range(self.HumanPara.simulation_human_count):
-            newi = Human(0, 0, 0, 0, self.HumanPara.simulation_area_xmeters, self.HumanPara.simulation_area_ymeters)
+            newi = Human(0, 0, 0, 0, self.HumanPara.simulation_area_xmeters, self.HumanPara.simulation_area_ymeters, self.HumanPara.simulation_move_radius)
             self.HumanList.append(newi)
-
-        self.HumanList[0].Status.RecvInfections = 20 #den ersten Menschen infizieren 
+        
+        for x in range(self.HumanPara.simulation_start_inf):
+            self.HumanList[x].Status.RecvInfections = 20 #die ersten Menschen infizieren 
         #endregion
 
         #region Init pygame
