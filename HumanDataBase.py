@@ -211,9 +211,9 @@ class Human():
     #endregion
 
     #region private functions
-    #region UpdateSpeed
+    #region UpdateSpeed - Anpassung der Geschwindigkeit
     def UpdateSpeed(self):
-        if self.Status.StopRadius < self.Config.RadiusNear: #and math.abs(GetAngleDiffBetween(hStatus.Angle, hStatus.StopAngle)) < 90 )
+        if self.Status.StopRadius < self.Config.RadiusNear:
             self.SpeedHuman = 0
         else:
             DeltaX = self.Status.Destination.X - self.Status.CurPos.X
@@ -235,7 +235,7 @@ class Human():
         return self.SpeedHuman
     #endregion
 
-    #region UpdateDestination
+    #region UpdateDestination - neues Ziel der Bewegung eines Objekts Human berechnen
     def UpdateDestination(self):
         self.Speed = random.uniform(self.Config.MinSpeed, self.Config.MaxSpeed)
         self.SpeedHuman = 0
@@ -270,10 +270,9 @@ class Human():
             if self.Status.Destination.Y < 0:
                 DestFound = False
 
-        #MinDist = math.pow(self.Status.Speed, 2) / (2 * self.Config.Acceleration) + 0.03
     #endregion
 
-    #region UpdatePosition
+    #region UpdatePosition - Berechnung der neuen Koordinaten des aktuellen Standorts eines Human
     def UpdatePosition(self):
         if self.SpeedHuman == 0:
             StopTime = self.TimeBase - self.LastMovTime
@@ -303,7 +302,7 @@ class Human():
             self.LastMovTime = self.TimeBase
     #endregion
 
-    #region UpdateAngle Berechnung des Winkels Laufrichtung
+    #region UpdateAngle - Berechnung des Winkels Laufrichtung
     def UpdateAngle(self, HumanList):
 
         # Suche nach Personen im Umkreis
@@ -326,7 +325,7 @@ class Human():
                     Angel = Angel * -1
                 #endregion
 
-                #region Übertragung der eigenen Infektion auf die Person gegenüber ... passt hier gut rein, weil wir den Abstand berechnet haben
+                #region Übertragung der eigenen Infektion auf die Person gegenüber
                 if Radius < self.Config.InfectionRadius and self.Status.InfectionLevel > 0: 
                     HumanList[hidx].SetInfection(self.Status.InfectionLevel)
                     print(hidx, Radius, self.Status.InfectionLevel )
@@ -428,7 +427,7 @@ class Human():
         #endregion
     #endregion
 
-    #region UpdateInfection Berechnung der Infektion
+    #region UpdateInfection - Berechnung des Infektionstatus
     def UpdateInfection(self):
         #Status Healthy
         if self.Status.CurInfectionStat == InfectionStat.HEALTHY: 
@@ -446,10 +445,10 @@ class Human():
                 self.Status.InfectionTimeStamp = self.TimeBase
                 self.Status.InfUpdateTimeStamp = self.TimeBase
 
-        #Status Infected ... later
+        #Status Infected 
         if self.Status.CurInfectionStat == InfectionStat.INFECTED:
             #keine weitere Übernahme anderer Viren bei bereits infiziertem Zustand
-            self.Status.RecvInfections = 0    #und wieder zurück setzen
+            self.Status.RecvInfections = 0    #deshalb zurück setzen
 
             timedelta = self.TimeBase - self.Status.InfUpdateTimeStamp
             if timedelta.total_seconds() > 10: 
@@ -478,14 +477,11 @@ class Human():
 
         #Status Immune
         if self.Status.CurInfectionStat == InfectionStat.IMMUNE:
-            self.Status.InfectionLevel = 0 #damit er keinen mehr infiziert
+            self.Status.InfectionLevel = 0 #keine Infektion anderer möglich
 
-        #Status Death
-        #if self.Status.CurInfectionStat == InfectionStat.DEATH:
-        #   self.Status.InfectionLevel = 0 #damit er keinen mehr infiziert
     #endregion
 
-    #region SetInfection 
+    #region SetInfection - Berechnung wie stark eine andere Person infiziert wird
     def SetInfection(self, InfectionValue: int):
         if InfectionValue > 100:
             InfectionValue = 10 
@@ -498,7 +494,7 @@ class Human():
     #endregion
     #endregion
 
-    #region public functions Simulation Go
+    #region public functions Simulation Go - Aufruf der Funktionen für Bewegungs- und Infektionsberechnung
     def Go(self, humanList, timelapseVal):
         #region Zeitstempel Zeitdifferenz berechnen
 
@@ -552,14 +548,14 @@ class Human():
 
         return DiffAngle
         
-    #Function to limit the meter-value to the maximum array-size    
+    #Function begrenzt Werte auf Größe der Fläche, die dargestellt wird   
     def Limit(self, value, maxval):
         if value > (maxval - 1):
             value = maxval - 1
         return value
     #endregion
 
-    #region public functions Return Datenübergabe
+    #region public functions Return - Datenübergabe
     def GetCurrentPosition(self):
         return (self.Status.CurPos.X, self.Status.CurPos.Y)
 
@@ -621,7 +617,7 @@ class Simulation():
 
     def Initialize(self,xmeters: int, ymeters: int, humancount: int, infectedcount: int, maxmovedist: float):
 
-        #overwrite initialized values
+        #Ueberschreiben der voreingestellten Werte mit eingegebenen Werten
         if xmeters > 0 and ymeters > 0 and humancount > 0 and maxmovedist > 0 and infectedcount > 0:
             self.HumanPara.simulation_human_count = humancount
             self.HumanPara.simulation_area_xmeters = xmeters
@@ -629,7 +625,7 @@ class Simulation():
             self.HumanPara.simulation_start_inf = infectedcount
             self.HumanPara.simulation_move_radius = maxmovedist
 
-        #region Init HumanList
+        #region Init HumanList - Objekte Human erzeugen
         self.HumanList.clear()
 
         for x in range(self.HumanPara.simulation_human_count):
@@ -668,7 +664,7 @@ class Simulation():
         self.IsInitialized = 1
         print("Initialize Simulation done")
 
-
+    #Abbruch der Simulation
     def Terminate(self):
         self.HumanList.clear()
         pygame.display.quit()
@@ -706,7 +702,7 @@ class Simulation():
         self.HumanList[Idx].Status.PicturePos.Y = yval
 
 
-
+    #Darstellung der Objekte und Aufruf der Funktion Go
     def Simulate(self, timelapseVal: float):
 
         self.HumanPara.simulation_time_lapse = timelapseVal
@@ -731,15 +727,13 @@ class Simulation():
                     self.PaintHuman(x)
 
                 #frame auf Display blenden
-
-
                 screen.blit(table, (0,0))
                 pygame.display.flip()
 
         self.LastDuration = time.time() - start
 
 
-
+    #Testausgaben
     def PrintHumanStats(self):
         for humi in self.HumanList:
             x, y = humi.GetCurrentPosition()

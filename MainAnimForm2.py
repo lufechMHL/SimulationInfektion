@@ -18,6 +18,7 @@ def simulate_humans():
     Simulator = HumanDataBase.Simulation()
     Simulator.InitModule()
 
+    #Eingabewerte testen, bei keiner Eingabe voreingestellte Werte vergeben
     def setStartSim():
         if entryXmeters.get() != "":
             try:
@@ -67,20 +68,24 @@ def simulate_humans():
         if simulation_area_xmeters > 0 and simulation_area_ymeters > 0 and start_Infected > 0 and totalPopulation > 0:
             Simulator.Initialize(simulation_area_xmeters, simulation_area_ymeters, totalPopulation, start_Infected, max_distance)
     
+    #Abbruch der Simulation
     def setStopSim ():
         Simulator.Terminate()
     
+    #Erhöhung des Zeitraffers
     def setIncTime ():
         global simulation_timelapse_val
         simulation_timelapse_val =simulation_timelapse_val * 2
         print(simulation_timelapse_val)
     
+    #Verringerung des Zeitraffers
     def setDecTime ():
         global simulation_timelapse_val
         simulation_timelapse_val = simulation_timelapse_val/2
         if simulation_timelapse_val < 1.0:
             simulation_timelapse_val = 1.0
     
+    #Eingabefenster mit Tkinter
     root=Tk()
 
     root.title("Eingabefenster")
@@ -139,6 +144,7 @@ def simulate_humans():
     Button(mainFrame, text="Stop Simulation", command=setStopSim, width=16, font=('arial', 15)).grid(column=2, row=8, columnspan=2)
 
     print("Simulation started")
+    
     while True:
         start = time.time()
 
