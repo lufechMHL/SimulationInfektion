@@ -37,7 +37,7 @@ class InfectionStat(Enum):
     IMMUNE = 4
     DEATH = 5
 
-#region HumanStat - Daten zum Darstellen in der GUI
+#region HumanStat - Daten zum Darstellen eines Objektes Human in der GUI
 class HumanStat():
 
     #nested class Position
@@ -81,7 +81,7 @@ class HumanStat():
 
 #endregion
 
-#region HumanConfig - Configuration eines Objekts
+#region HumanConfig - Configuration eines Objekts Human
 class HumanConfig():
     
     MaxSpeed: float
@@ -110,9 +110,8 @@ class HumanConfig():
         self.InfectionRadius = RadiusFar #(RadiusFar - RadiusNear)/2 + RadiusNear #anpassbar im ersten Wurf genau zwischen RadiusFar und RadiusNear
 
 #endregion
-#endregion
 
-#region class global param
+#region class global param 
 class GlobalParam():
     # width of the simulation window
     simulation_window_width: int
@@ -144,16 +143,15 @@ class GlobalParam():
         self.simulation_ball_radius = 5
         self.simulation_area_xmeters = 100
         self.simulation_area_ymeters = 80
-        self.simulation_human_count = 30
+        self.simulation_human_count = 50
         self.simulation_time_lapse = 1.0
         self.simulation_window_update_sec = 0.2
         self.simulation_move_radius = 50.0
 
-
+#endregion
 #endregion
 
-
-#region class Human - Klasse um die Bewegung und die Gesundheit der Objekte zu simulieren ============================================
+#region class Human - Klasse zur Simulation einer Person um die Bewegung und die Gesundheit der Personen zu simulieren ============================================
 class Human():
 
     guid: str  #zufälliger Name für Objekte
@@ -273,7 +271,6 @@ class Human():
                 DestFound = False
 
         #MinDist = math.pow(self.Status.Speed, 2) / (2 * self.Config.Acceleration) + 0.03
-
     #endregion
 
     #region UpdatePosition
@@ -288,8 +285,6 @@ class Human():
                 self.LastMovTime = self.TimeBase
 
         else:
-            #self.SetCurrentPosInHumanArray(False)   #reset aktuelle Position im Array
-
             DeltaRadius = self.TimeDelay * self.SpeedHuman 
             self.Status.DeltaPos.X = DeltaRadius * math.cos(self.Status.Angle / 360 * 2 * math.pi)
             self.Status.DeltaPos.Y = DeltaRadius * math.sin(self.Status.Angle / 360 * 2 * math.pi)
@@ -305,7 +300,6 @@ class Human():
                 self.Status.CurPos.X = self.Limit(self.Status.CurPos.X + DistX, self.maxX)
                 self.Status.CurPos.Y = self.Limit(self.Status.CurPos.Y + DistY, self.maxY)
 
-            #self.SetCurrentPosInHumanArray(True)   #set aktuelle Position im Array >> neue Position
             self.LastMovTime = self.TimeBase
     #endregion
 
@@ -316,11 +310,7 @@ class Human():
         lastrad = self.Config.RadiusFar
         RadiusNext = lastrad
 
-        #Über die Matrix HumanArray werden jetzt nur die Humans ermittelt, die sich im Umkreis von RadiusFar befinden
-        #humansAround = self.CheckIfHumanAround()
-
         #region Schleife über die Liste aller Humans im Umkreis RadiusFar
-        #for hidx in humansAround:  
         for hidx in range(len(HumanList)):
             tagstr = HumanList[hidx].GetGuid()
             if tagstr != self.guid:
@@ -436,7 +426,7 @@ class Human():
         return RadiusNext
     #endregion
         #endregion
-
+    #endregion
 
     #region UpdateInfection Berechnung der Infektion
     def UpdateInfection(self):
@@ -477,22 +467,22 @@ class Human():
 
             timedelta = self.TimeBase - self.Status.InfUpdateTimeStamp
             if timedelta.total_seconds() > 10: 
-                self.Status.InfectionLevel = self.Status.InfectionLevel - 1 #Selbstheilung 
+                self.Status.InfectionLevel = self.Status.InfectionLevel - 5 #Selbstheilung 
                 self.Status.InfUpdateTimeStamp = self.TimeBase
 
             if self.Status.InfectionLevel < 20:                     
                 self.Status.CurInfectionStat = InfectionStat.IMMUNE       #Status auf Immun
 
-            if self.Status.InfectionLevel > 200:                     
-                self.Status.CurInfectionStat = InfectionStat.DEATH       #Status auf Death
+            #if self.Status.InfectionLevel > 200:                     
+            #   self.Status.CurInfectionStat = InfectionStat.DEATH       #Status auf Death
 
         #Status Immune
         if self.Status.CurInfectionStat == InfectionStat.IMMUNE:
             self.Status.InfectionLevel = 0 #damit er keinen mehr infiziert
 
         #Status Death
-        if self.Status.CurInfectionStat == InfectionStat.DEATH:
-            self.Status.InfectionLevel = 0 #damit er keinen mehr infiziert
+        #if self.Status.CurInfectionStat == InfectionStat.DEATH:
+        #   self.Status.InfectionLevel = 0 #damit er keinen mehr infiziert
     #endregion
 
     #region SetInfection 
@@ -505,51 +495,10 @@ class Human():
             InfectionValue = 1
 
         self.Status.RecvInfections = self.Status.RecvInfections + InfectionValue
-
+    #endregion
     #endregion
 
-
-    #region Positions-Array verwalten
-    #Funktion ermittelt den eigenen Index in der globalen Liste HumanList
-    def GetMyIndexInHumanList(self):
-        if self.MyIndexInHumanList < 0:
-            for x in range(len(HumanList)):  
-                tagstr = HumanList[x].GetGuid()
-                if tagstr == self.guid:
-                    self.MyIndexInHumanList = x
-        
-        return self.MyIndexInHumanList
-
-    def SetCurrentPosInHumanArray(self, SetPos: bool):
-        tempx = math.floor( self.Status.CurPos.X) 
-        tempy = math.floor( self.Status.CurPos.Y) 
-        idx = self.GetMyIndexInHumanList()
-
-        if SetPos == True:
-            HumanArray[idx, tempx, tempy] = 1
-        else:
-            HumanArray[idx, tempx, tempy] = 0
-
-    def CheckIfHumanAround(self):
-        tempx = math.floor( self.Status.CurPos.X) 
-        tempy = math.floor( self.Status.CurPos.Y) 
-        idx = self.GetMyIndexInHumanList()
-        humansAroundMe = []
-        maxh = HumanArray.shape[0] - 1 #lese die länge der 0ten Dimension des Array >> Dimension Index HumanList >> 0-based 
-        maxindex = math.ceil(self.Config.RadiusFar) #für die Prüfung relevanter Radius = Index
-        for x in range(tempx - maxindex, tempx + maxindex):
-            for y in range(tempy -maxindex, tempy + maxindex):
-                for h in range(0,maxh): 
-                    if x >= 0 and x < self.maxX and y >= 0 and y < self.maxY:
-                        if HumanArray[h,x,y] > 0:
-                            humansAroundMe.append(h)
-
-        return humansAroundMe
-
-
-    #endregion
-
-    #region Simulation Go
+    #region public functions Simulation Go
     def Go(self, humanList, timelapseVal):
         #region Zeitstempel Zeitdifferenz berechnen
 
@@ -608,12 +557,9 @@ class Human():
         if value > (maxval - 1):
             value = maxval - 1
         return value
-
     #endregion
 
-
-
-    #region Return
+    #region public functions Return Datenübergabe
     def GetCurrentPosition(self):
         return (self.Status.CurPos.X, self.Status.CurPos.Y)
 
@@ -622,10 +568,8 @@ class Human():
 
     def GetGuid(self):
         return self.guid
-
     #endregion
 
-#endregion
 #endregion
 
 #region -- Main module ===============================================================================================================
@@ -639,9 +583,6 @@ class Simulation():
     LastDuration: float
     SimuDuration: float
     SimuTimeStamp: time
-
-    #init numpy-array für die Fläche mit z-Koordinate für die Humans in einer Meterfläche
-    #HumanArray = np.zeros((simulation_human_count,simulation_area_xmeters, simulation_area_ymeters ),dtype=int)
     #endregion
 
     #region Simulationmodule fuctions / interface 
@@ -659,11 +600,10 @@ class Simulation():
         self.HumanPara.simulation_time_lapse = 1.0
         self.HumanPara.simulation_area_xmeters = 100
         self.HumanPara.simulation_area_ymeters = 80
-        self.HumanPara.simulation_human_count = 30
+        self.HumanPara.simulation_human_count = 50
         self.HumanPara.simulation_start_inf = 2
         self.HumanPara.simulation_move_radius = 50.0
 
-        self.HumanArray = np.zeros((self.HumanPara.simulation_human_count,self.HumanPara.simulation_area_xmeters, self.HumanPara.simulation_area_ymeters ),dtype=int)
         print("Init Module done")
 
     def InitModule(self):

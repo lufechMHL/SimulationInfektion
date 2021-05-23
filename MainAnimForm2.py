@@ -80,7 +80,6 @@ def simulate_humans():
         simulation_timelapse_val = simulation_timelapse_val/2
         if simulation_timelapse_val < 1.0:
             simulation_timelapse_val = 1.0
-        print(simulation_timelapse_val)
     
     root=Tk()
 
