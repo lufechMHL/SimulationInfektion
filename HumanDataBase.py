@@ -13,17 +13,14 @@
 
 #-------------- Module in CMD-Kommandozeile mittels pip installieren!!!! Einmalig auf dem lokalen Rechner
 #python -python -m pip install -U pygame --user
-#python -python -m pip install -U numpy --user
 
 import uuid
-#import dataclasses
 import random
 import time
 import math
 import colour
 import sys
 import datetime
-import numpy as np   #install via pip >>> python -m pip install -U numpy --user
 import pygame
 from enum import Enum
 from pygame.locals import *
@@ -35,7 +32,7 @@ class InfectionStat(Enum):
     INFECTED = 2
     SICK = 3
     IMMUNE = 4
-    DEATH = 5
+  
 
 #region HumanStat - Daten zum Darstellen eines Objektes Human in der GUI
 class HumanStat():
@@ -688,9 +685,6 @@ class Simulation():
 
         if self.HumanList[Idx].Status.CurInfectionStat == InfectionStat.IMMUNE:
             setcolour = colour.blue
-
-        if self.HumanList[Idx].Status.CurInfectionStat == InfectionStat.DEATH:
-            setcolour = colour.dark_grey
 
         #neue Position zeichnen
         xval = self.HumanList[Idx].Status.CurPos.X / self.HumanPara.simulation_scale_meter2pixel

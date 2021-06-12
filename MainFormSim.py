@@ -90,7 +90,7 @@ def simulate_humans():
 
     root.title("Eingabefenster")
 
-    mainFrame=ttk.Frame(root, borderwidth=2, relief='solid', width=460, height=380, padding='20')
+    mainFrame=ttk.Frame(root, borderwidth=2, relief='solid', width=500, height=460, padding='20')
     mainFrame.grid_propagate(0)
     mainFrame.grid(column=0, row=0)
     mainFrame.columnconfigure(0, weight=1)
@@ -107,25 +107,25 @@ def simulate_humans():
     mainFrame.rowconfigure(7, weight=2)
     mainFrame.rowconfigure(8, weight=2)
 
-    Überschrift=Label(mainFrame, text="Kontrollfeld", font=('arial', 20))
-    Überschrift.grid(column=0, row=0, columnspan=4)
+    Ueberschrift=Label(mainFrame, text="Eingabe", font=('arial', 18))
+    Ueberschrift.grid(column=0, row=0, columnspan=4)
 
     LabelN=Label(mainFrame, text="Anzahl der Personen insgesamt:", font=('arial', 12))
     LabelN.grid(column=0, row=1, columnspan=3)
     LabelI=Label(mainFrame, text="Anzahl der zu Beginn Infizierten", font=('arial', 12))
     LabelI.grid(column=0, row=2, columnspan=3)
-    Labelxmeters=Label(mainFrame, text="Breite (X Meter)", font=('arial', 12))
+    Labelxmeters=Label(mainFrame, text="Breite (X Meters)", font=('arial', 12))
     Labelxmeters.grid(column=0, row=3, columnspan=3)
     Labelymeters=Label(mainFrame, text="Höhe (Y Meters)", font=('arial', 12))
     Labelymeters.grid(column=0, row=4, columnspan=3)
-    Labeldistance=Label(mainFrame, text="Distanz (Meters)", font=('arial', 12))
+    Labeldistance=Label(mainFrame, text="Distance (Meters)", font=('arial', 12))
     Labeldistance.grid(column=0, row=5, columnspan=3)
     Labelvelocity=Label(mainFrame, text="Geschwindigkeit der Simulation", font=('arial', 12))
     Labelvelocity.grid(column=0, row=6, columnspan=3)
     timetext = StringVar()
     timetext.set("Test")
     Labelvelodisp = Label(mainFrame, textvariable=timetext, font=('arial', 11))
-    Labelvelodisp.grid(column=3, row=6, columnspan=3)
+    Labelvelodisp.grid(column=3, row=6)
 
     entryPopulation=Entry(mainFrame, width=10)
     entryPopulation.grid(column=3, row=1)
@@ -138,10 +138,19 @@ def simulate_humans():
     entryDistance=Entry(mainFrame, width=10)
     entryDistance.grid(column=3, row=5)
 
-    Button(mainFrame, text="langsamer", command=setDecTime, width=16, font=('arial', 15)).grid(column=0, row=7, columnspan=2)    
-    Button(mainFrame, text="schneller", command=setIncTime, width=16, font=('arial', 15)).grid(column=2, row=7, columnspan=2)
-    Button(mainFrame, text="Start Simulation", command=setStartSim, width=16, font=('arial', 15)).grid(column=0, row=8, columnspan=2)
-    Button(mainFrame, text="Stop Simulation", command=setStopSim, width=16, font=('arial', 15)).grid(column=2, row=8, columnspan=2)
+    Labelgreen=Label(mainFrame, text="für die Krankheit empfängliche Personen (S): grün dargestellt", font=('arial', 12))
+    Labelgreen.grid(column=0, row=7, columnspan=4)
+    Labellightred=Label(mainFrame, text="infizierte Personen (I): hellrot dargestellt", font=('arial', 12))
+    Labellightred.grid(column=0, row=8, columnspan=4)
+    Labeldarkred=Label(mainFrame, text="erkrankte Personen (I): dunkelrot dargestellt", font=('arial', 12))
+    Labeldarkred.grid(column=0, row=9, columnspan=4)
+    Labelblue=Label(mainFrame, text="immune und gestorbene Personen (R): blau dargestellt", font=('arial', 12))
+    Labelblue.grid(column=0, row=10, columnspan=4)
+
+    Button(mainFrame, text="langsamer", command=setDecTime, width=16, font=('arial', 15)).grid(column=0, row=11, columnspan=2)    
+    Button(mainFrame, text="schneller", command=setIncTime, width=16, font=('arial', 15)).grid(column=2, row=11, columnspan=2)
+    Button(mainFrame, text="Start Simulation", command=setStartSim, width=16, font=('arial', 15)).grid(column=0, row=12, columnspan=2)
+    Button(mainFrame, text="Stop Simulation", command=setStopSim, width=16, font=('arial', 15)).grid(column=2, row=12, columnspan=2)
 
     print("Simulation started")
     
