@@ -107,7 +107,7 @@ def simulate_humans():
     mainFrame.rowconfigure(7, weight=2)
     mainFrame.rowconfigure(8, weight=2)
 
-    Ueberschrift=Label(mainFrame, text="Eingabe", font=('arial', 18))
+    Ueberschrift=Label(mainFrame, text="Eingabe", font=('arial', 20))
     Ueberschrift.grid(column=0, row=0, columnspan=4)
 
     LabelN=Label(mainFrame, text="Anzahl der Personen insgesamt:", font=('arial', 12))
